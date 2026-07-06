@@ -566,10 +566,6 @@ tbody td{padding:14px 16px;font-size:13px;vertical-align:middle}
   gap:6px;padding:30px 20px;text-align:center;
   animation:slideIn .55s cubic-bezier(.22,1,.36,1);
 }
-.fc-eyebrow{
-  font-size:14px;letter-spacing:.32em;text-transform:uppercase;
-  color:var(--gold);opacity:.8;font-weight:600;
-}
 .fc-title{
   font-size:clamp(34px,5vw,60px);font-weight:800;line-height:1.05;
   color:var(--gold-light);margin-top:4px;
@@ -622,12 +618,6 @@ tbody td{padding:14px 16px;font-size:13px;vertical-align:middle}
 .fc-flap-upper span{top:0;}
 .fc-flap-lower{bottom:0;border-radius:0 0 12px 12px;transform-origin:50% 0%;background:linear-gradient(#211c1b,#171313);transform:rotateX(90deg);}
 .fc-flap-lower span{top:-100%;}
-.fc-msg{
-  margin-top:26px;font-size:18px;color:var(--gold);min-height:24px;
-  letter-spacing:.04em;
-}
-.fc-msg.ended{color:var(--gold-bright);font-weight:700;}
-
 /* LEFT PANEL - info */
 .pres-info{
   padding:48px 52px;
@@ -960,7 +950,7 @@ input[type=range]::-webkit-slider-thumb{
       Salvar arquivo
       <div class="save-pulse" id="save-pulse"></div>
     </button>
-    <button class="gear-btn unlocked active" onclick="requestAdmin()" id="tab-admin" title="Administrar (desbloqueado)">⚙️</button>
+    <button class="gear-btn" onclick="requestAdmin()" id="tab-admin" title="Administrar">⚙️</button>
   </nav>
 </header>
 
@@ -1576,7 +1566,7 @@ input[type=range]::-webkit-slider-thumb{
 </div>
 
 <!-- ========== ADMIN PAGE ========== -->
-<div class="page active" id="page-admin">
+<div class="page" id="page-admin">
 <div class="main">
 
   <div class="section-title">Administração de Indicadores</div>
@@ -2433,6 +2423,15 @@ input[type=range]::-webkit-slider-thumb{
               </select>
             </div>
             <div style="font-size:11px;color:var(--text-dim);margin-top:8px">As fotos são lidas automaticamente de <code style="background:var(--bg-deep);color:var(--gold);padding:1px 6px;border-radius:4px;font-size:11px">/fotos/manifest.json</code>. Basta subir ou apagar imagens na pasta do repositório — o manifest é atualizado sozinho por uma GitHub Action.</div>
+          </div>
+
+          <!-- Sincronizar configuração entre computadores/TVs -->
+          <div style="margin-top:16px;padding-top:20px;border-top:1px solid var(--border)">
+            <div class="form-label" style="margin-bottom:10px">Sincronizar esta configuração em todas as TVs</div>
+            <div style="font-size:12px;color:var(--text-dim);margin-bottom:12px;line-height:1.5">
+              Tudo acima (relógio, duração, ordem, fotos) fica salvo só neste navegador. Para que outro computador ou a TV abra já configurado do mesmo jeito, baixe o arquivo abaixo e suba-o para a pasta <code style="background:var(--bg-deep);color:var(--gold);padding:1px 6px;border-radius:4px;font-size:11px">config/</code> do repositório no GitHub (arrastar e comitar, igual às fotos).
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="exportPresConfig()" type="button">⬇ Baixar configuração (pres-config.json)</button>
           </div>
 
         </div>
@@ -5091,26 +5090,11 @@ function renderPhotoSlide(photoIdxStr) {
 }
 
 // ─── Save/load pres config ─────────────────
-function loadPresConfig() {
-  try {
-    const s = localStorage.getItem(PRES_KEY);
-    if (s) {
-      const c = JSON.parse(s);
-      presState.duration = c.duration || 15;
-      presState.order = c.order || 'sequential';
-      presState.which = c.which || 'all';
-      presState.selectedIds = new Set(c.selectedIds || []);
-      presState.procFilter = c.procFilter || 'ALL';
-      presState.showCountdown = c.showCountdown !== false;
-      presState.countdownDate = c.countdownDate || null;
-      presState.countdownTitle = c.countdownTitle || null;
-      presState.showPhotos = c.showPhotos !== false;
-      presState.photoInterval = c.photoInterval || 6;
-    }
-  } catch(e){}
-}
-function savePresConfig() {
-  localStorage.setItem(PRES_KEY, JSON.stringify({
+// Formato compartilhado entre localStorage (por navegador) e o config.json do
+// repositório (config/pres-config.json, item "sincronizar configuração entre
+// computadores") — as duas fontes usam exatamente o mesmo formato de objeto.
+function serializePresConfig() {
+  return {
     duration: presState.duration,
     order: presState.order,
     which: presState.which,
@@ -5121,7 +5105,57 @@ function savePresConfig() {
     countdownTitle: presState.countdownTitle,
     showPhotos: presState.showPhotos,
     photoInterval: presState.photoInterval,
-  }));
+  };
+}
+function applyPresConfig(c) {
+  if (!c || typeof c !== 'object') return;
+  presState.duration = c.duration || 15;
+  presState.order = c.order || 'sequential';
+  presState.which = c.which || 'all';
+  presState.selectedIds = new Set(c.selectedIds || []);
+  presState.procFilter = c.procFilter || 'ALL';
+  presState.showCountdown = c.showCountdown !== false;
+  presState.countdownDate = c.countdownDate || null;
+  presState.countdownTitle = c.countdownTitle || null;
+  presState.showPhotos = c.showPhotos !== false;
+  presState.photoInterval = c.photoInterval || 6;
+}
+function loadPresConfig() {
+  try {
+    const s = localStorage.getItem(PRES_KEY);
+    if (s) applyPresConfig(JSON.parse(s));
+  } catch(e){}
+}
+function savePresConfig() {
+  localStorage.setItem(PRES_KEY, JSON.stringify(serializePresConfig()));
+}
+
+// Busca a configuração "oficial" salva no repositório (config/pres-config.json).
+// Mesma lógica de segurança do item 2 (fotos): fetch same-origin, sem API do
+// GitHub, sem token, e falha graciosamente se o arquivo não existir ou a rede
+// falhar — nesse caso mantém o que já estava carregado do localStorage.
+async function loadPresConfigFromRepo() {
+  try {
+    const res = await fetch('./config/pres-config.json', { cache: 'no-store' });
+    if (!res.ok) return;
+    const c = await res.json();
+    applyPresConfig(c);
+    savePresConfig(); // espelha no localStorage deste navegador, pra ficar consistente
+  } catch (e) { /* mantém a configuração local — TV/computador continua funcionando */ }
+}
+
+// Gera o config/pres-config.json atualizado para baixar e subir manualmente no
+// GitHub (arrastar para a pasta config/ e comitar) — é assim que a configuração
+// passa a valer igual em todos os computadores/TVs (ver config/README.md).
+function exportPresConfig() {
+  const blob = new Blob([JSON.stringify(serializePresConfig(), null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'pres-config.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('pres-config.json baixado. Envie para a pasta config/ no GitHub e comite para aplicar em todas as TVs.', 'success');
 }
 
 // ─── Config panel population ───────────────
@@ -5690,11 +5724,6 @@ function tickCountdown() {
   updateGroup('fc-h', p.hours);
   updateGroup('fc-m', p.mins);
   updateGroup('fc-s', p.secs);
-  const msg = document.getElementById('fc-msg');
-  if (msg) {
-    if (p.ended) { msg.textContent = '✓ Chegou o dia da auditoria final'; msg.classList.add('ended'); }
-    else { msg.classList.remove('ended'); }
-  }
 }
 
 function renderCountdownSlide() {
@@ -5718,7 +5747,6 @@ function renderCountdownSlide() {
 
     if (!document.getElementById('fc-d-t')) {
       cdEl.innerHTML = `
-        <div class="fc-eyebrow">Contagem regressiva</div>
         <div class="fc-title" id="fc-title">${title}</div>
         <div class="fc-date" id="fc-date">${dataFmt}</div>
         <div class="fc-clock">
@@ -5730,7 +5758,6 @@ function renderCountdownSlide() {
           <div class="fc-sep">:</div>
           ${groupHTML('fc-s','Segundos')}
         </div>
-        <div class="fc-msg" id="fc-msg"></div>
       `;
     } else {
       const titleEl = document.getElementById('fc-title');
@@ -5923,9 +5950,21 @@ function saveToFile() {
 // ============================================================
 // INIT
 // ============================================================
-loadData();
-renderDashboard();
-loadPhotosManifest(); // item 2: busca assíncrona, não bloqueia o carregamento da página
+// A página abre, por padrão, direto na Gestão à Vista em tela cheia — é o que
+// fica ligado na TV. O Dashboard/Admin continuam existindo por baixo (ⓘ acessível
+// pelo botão 📊 Dashboard ou fechando a apresentação), mas nunca são o que a TV
+// mostra sozinha, e a Administração continua exigindo a senha normalmente.
+async function initApp() {
+  loadData();
+  renderDashboard();
+  showPage('dashboard');
+  await loadPhotosManifest(); // espera a galeria carregar antes de montar a fila, senão as fotos só entrariam na próxima reinicialização
+  loadPresConfig();
+  await loadPresConfigFromRepo(); // config.json do repositório (se existir) vale mais que o localStorage deste navegador
+  renderPresConfig(); // aplica data/título do relógio, duração, ordem etc. salvos, sem precisar abrir a tela de Admin
+  startPresentation();
+}
+initApp();
 
 </script>
 

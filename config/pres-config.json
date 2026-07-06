@@ -1,0 +1,12 @@
+{
+  "duration": 15,
+  "order": "sequential",
+  "which": "all",
+  "selectedIds": [],
+  "procFilter": "ALL",
+  "showCountdown": true,
+  "countdownDate": null,
+  "countdownTitle": null,
+  "showPhotos": true,
+  "photoInterval": 6
+}
