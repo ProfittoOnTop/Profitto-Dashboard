@@ -3806,6 +3806,41 @@ function saveData() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify({ data: DATA, nextId }));
 }
 
+// Busca dados/indicadores-valores.json (gerado pela GitHub Action "Atualizar
+// indicadores" a partir de dados/indicadores.csv — ver dados/README.md) e
+// aplica os meses novos por cima do DATA já carregado. Mesma receita de
+// segurança do fotos/manifest.json e config/pres-config.json: fetch
+// same-origin, sem API/token do GitHub, falha graciosamente se o arquivo não
+// existir. NUNCA sobrescreve um mês que já tem valor — só preenche o que
+// ainda estava em branco (a Action já aplica essa mesma regra; aqui é uma
+// segunda camada de proteção, caso o DATA local já tenha avançado por outro
+// caminho, ex. lançamento manual).
+async function loadIndicadoresValoresFromRepo() {
+  try {
+    const res = await fetch('./dados/indicadores-valores.json', { cache: 'no-store' });
+    if (!res.ok) return;
+    const patch = await res.json();
+    if (!Array.isArray(patch) || !patch.length) return;
+
+    let changed = false;
+    patch.forEach(({ id, values }) => {
+      const row = DATA.find(d => d.id === id);
+      if (!row || !values) return;
+      Object.entries(values).forEach(([mes, val]) => {
+        if (row.values[mes] === undefined) {
+          row.values[mes] = val;
+          changed = true;
+        }
+      });
+    });
+
+    if (changed) {
+      recomputeAutoHidden();
+      saveData();
+    }
+  } catch (e) { /* mantém os dados já carregados — TV continua funcionando normalmente */ }
+}
+
 // ─── Item 4: ocultar por padrão, na Gestão à Vista, indicadores qualitativos ───
 // ─── ou sem nenhum dado lançado                                            ───
 //
@@ -5714,6 +5749,7 @@ function saveToFile() {
 // mostra sozinha, e a Administração continua exigindo a senha normalmente.
 async function initApp() {
   loadData();
+  await loadIndicadoresValoresFromRepo(); // aplica meses novos de dados/indicadores-valores.json antes do primeiro render
   renderDashboard();
   showPage('dashboard');
   await loadPhotosManifest(); // espera a galeria carregar antes de montar a fila, senão as fotos só entrariam na próxima reinicialização
