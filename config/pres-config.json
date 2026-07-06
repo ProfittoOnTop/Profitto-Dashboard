@@ -5,8 +5,8 @@
   "selectedIds": [],
   "procFilter": "ALL",
   "showCountdown": true,
-  "countdownDate": null,
-  "countdownTitle": null,
+  "countdownDate": "2026-07-08T12:00:00",
+  "countdownTitle": "Entrega Cobertores - Campanha do Agasalho",
   "showPhotos": true,
   "photoInterval": 6
 }
