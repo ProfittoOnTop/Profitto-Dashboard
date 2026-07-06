@@ -1,6 +1,6 @@
 # Atualização automática dos indicadores (dados/indicadores.csv)
 
-Todo mês, em vez de pedir pro Claude editar o código à mão, basta subir aqui
+Todo mês basta subir aqui
 a planilha atualizada — uma GitHub Action lê o arquivo, casa cada linha com
 os indicadores do dashboard, e aplica os meses novos sozinha.
 
