@@ -896,33 +896,33 @@ input[type=range]::-webkit-slider-thumb{
 .pol-dot.active{background:var(--gold);width:8px;height:8px;}
 
 /* —— ITEM 2: GALERIA "O QUE VEM POR AÍ" —————————— */
-.photo-slide-eyebrow{
-  font-size:14px;letter-spacing:.32em;text-transform:uppercase;
-  color:var(--gold);opacity:.85;font-weight:600;margin-bottom:8px;
-}
+/* .pres-countdown (compartilhada com relógio/política) limita a 1400px — a
+   galeria de fotos precisa de mais espaço, por isso o container recebe um
+   teto próprio aqui, sem afetar os outros slides que usam a mesma classe. */
+#pres-photo-slide{max-width:96vw;padding:16px;}
 .photo-slide-frame{
   position:relative;
-  max-width:min(920px,80vw);max-height:62vh;
+  max-width:min(1700px,94vw);max-height:88vh;
   border:1px solid rgba(212,169,125,.35);
   border-radius:16px;overflow:hidden;
   background:var(--surface);
   box-shadow:0 24px 60px rgba(0,0,0,.5);
 }
-/* corte diagonal no canto inferior direito — assinatura visual Profitto */
+/* corte diagonal no canto inferior direito — assinatura visual Profitto (bem menor, pra não competir com a foto) */
 .photo-slide-frame::after{
   content:'';position:absolute;right:-1px;bottom:-1px;
-  width:46px;height:46px;
+  width:22px;height:22px;
   background:var(--bg-deep);
   clip-path:polygon(100% 0, 0 100%, 100% 100%);
   border-top:1px solid rgba(212,169,125,.35);
   border-left:1px solid rgba(212,169,125,.35);
 }
 .photo-slide-frame img{
-  display:block;max-width:100%;max-height:62vh;width:auto;height:auto;
+  display:block;max-width:100%;max-height:88vh;width:auto;height:auto;
   object-fit:contain;
 }
 .photo-slide-caption{
-  margin-top:20px;font-size:16px;color:var(--gold-light);
+  margin-top:16px;font-size:16px;color:var(--gold-light);
   font-family:'Cormorant Garamond',serif;font-style:italic;letter-spacing:.02em;
 }
 </style>
@@ -2738,18 +2738,6 @@ const DEFAULT_DATA = [
     "unit": ""
   },
   {
-    "id": 61,
-    "processo": "COMERCIAL",
-    "resp": "PEDRO",
-    "indicador": "Feedbacks Colaborador (trimestral)",
-    "indice": "nº de feedbacks / nº de colaboradores",
-    "meta": "1",
-    "values": {},
-    "targetVal": 1,
-    "targetDir": "gte",
-    "unit": ""
-  },
-  {
     "id": 62,
     "processo": "COMERCIAL",
     "resp": "PEDRO",
@@ -2765,30 +2753,6 @@ const DEFAULT_DATA = [
     "targetVal": 5,
     "targetDir": "lte",
     "unit": "d"
-  },
-  {
-    "id": 63,
-    "processo": "COMERCIAL",
-    "resp": "PEDRO",
-    "indicador": "Treinamento mensal - Diretoria Comercial",
-    "indice": "nº de treinamentos / mês",
-    "meta": ">= 1",
-    "values": {},
-    "targetVal": 1,
-    "targetDir": "gte",
-    "unit": ""
-  },
-  {
-    "id": 64,
-    "processo": "COMERCIAL",
-    "resp": "PEDRO",
-    "indicador": "Treinamento trimestral - Profitto",
-    "indice": "nº de treinamentos / trimestre",
-    "meta": ">= 1",
-    "values": {},
-    "targetVal": 1,
-    "targetDir": "gte",
-    "unit": ""
   },
   {
     "id": 65,
@@ -2941,18 +2905,6 @@ const DEFAULT_DATA = [
     "unit": ""
   },
   {
-    "id": 67,
-    "processo": "JURIDICO",
-    "resp": "DANIEL",
-    "indicador": "Feedbacks Colaborador (trimestral)",
-    "indice": "nº de feedbacks / nº de colaboradores",
-    "meta": "1",
-    "values": {},
-    "targetVal": 1,
-    "targetDir": "gte",
-    "unit": ""
-  },
-  {
     "id": 68,
     "processo": "JURIDICO",
     "resp": "DANIEL",
@@ -2985,33 +2937,6 @@ const DEFAULT_DATA = [
     "targetVal": 5,
     "targetDir": "lte",
     "unit": "d"
-  },
-  {
-    "id": 70,
-    "processo": "JURIDICO",
-    "resp": "MAIARA",
-    "indicador": "Treinamento mensal - Diretoria Jurídica",
-    "indice": "nº de treinamentos / mês",
-    "meta": ">= 1",
-    "values": {
-      "MAR": 1,
-      "ABR": 1
-    },
-    "targetVal": 1,
-    "targetDir": "gte",
-    "unit": ""
-  },
-  {
-    "id": 71,
-    "processo": "JURIDICO",
-    "resp": "MAIARA",
-    "indicador": "Treinamento trimestral - Profitto",
-    "indice": "nº de treinamentos / trimestre",
-    "meta": ">= 1",
-    "values": {},
-    "targetVal": 1,
-    "targetDir": "gte",
-    "unit": ""
   },
   {
     "id": 18,
@@ -3193,18 +3118,6 @@ const DEFAULT_DATA = [
     "unit": ""
   },
   {
-    "id": 77,
-    "processo": "OPERACOES",
-    "resp": "CINTHYA",
-    "indicador": "Percentual de cumprimento do plano social (anual)",
-    "indice": "nº de ações concluídas / total de ações previstas",
-    "meta": "1",
-    "values": {},
-    "targetVal": 1,
-    "targetDir": "gte",
-    "unit": ""
-  },
-  {
     "id": 24,
     "processo": "PROFITTO",
     "resp": "FINANCEIRO",
@@ -3219,23 +3132,6 @@ const DEFAULT_DATA = [
     "unit": "%",
     "targetVal": 0.2,
     "targetDir": "gte",
-    "presHidden": true
-  },
-  {
-    "id": 25,
-    "processo": "PROFITTO",
-    "resp": "FINANCEIRO",
-    "indicador": "Índice de inadimplência",
-    "indice": "recebimentos em atraso / total",
-    "meta": "<= 5%",
-    "values": {
-      "JAN": 0.0396,
-      "FEV": 0.0464,
-      "MAR": 0.0582
-    },
-    "unit": "%",
-    "targetVal": 0.05,
-    "targetDir": "lte",
     "presHidden": true
   },
   {
@@ -3297,54 +3193,6 @@ const DEFAULT_DATA = [
       "MAR": 0.3886
     },
     "targetVal": 0.3,
-    "targetDir": "gte",
-    "unit": "%"
-  },
-  {
-    "id": 79,
-    "processo": "PROFITTO",
-    "resp": "MAIARA",
-    "indicador": "Índice de reconhecimento da marca Profitto",
-    "indice": "nº que reconhecem / nº total pesquisados",
-    "meta": ">= 60%",
-    "values": {},
-    "targetVal": 0.6,
-    "targetDir": "gte",
-    "unit": "%"
-  },
-  {
-    "id": 80,
-    "processo": "PROFITTO",
-    "resp": "CINTHYA",
-    "indicador": "Nº de feedbacks positivos em relação às lideranças desenvolvidas",
-    "indice": "feedbacks positivos / total de itens por liderança",
-    "meta": ">= 80%",
-    "values": {},
-    "targetVal": 0.8,
-    "targetDir": "gte",
-    "unit": "%"
-  },
-  {
-    "id": 81,
-    "processo": "PROFITTO",
-    "resp": "PROFITTO",
-    "indicador": "Renovação de contratos",
-    "indice": "nº novos contratos ou aditivos / total contratos início do ano",
-    "meta": "0.3",
-    "values": {},
-    "targetVal": 0.3,
-    "targetDir": "gte",
-    "unit": "%"
-  },
-  {
-    "id": 82,
-    "processo": "PROFITTO",
-    "resp": "CINTHYA",
-    "indicador": "Satisfação dos colaboradores",
-    "indice": "(∑ pontos pesquisa clima) / (∑ pontos possíveis) × 100",
-    "meta": ">= 80%",
-    "values": {},
-    "targetVal": 0.8,
     "targetDir": "gte",
     "unit": "%"
   },
@@ -3432,21 +3280,6 @@ const DEFAULT_DATA = [
     "unit": "%",
     "targetVal": 0.05,
     "targetDir": "lte"
-  },
-  {
-    "id": 30,
-    "processo": "TECNICO",
-    "resp": "RENNAN",
-    "indicador": "Nº de reuniões do coordenador com cliente",
-    "indice": "número de reuniões realizadas com o coordenador / mês",
-    "meta": ">= 2",
-    "values": {
-      "JAN": 1,
-      "FEV": 2
-    },
-    "unit": "",
-    "targetVal": 2,
-    "targetDir": "gte"
   },
   {
     "id": 49,
@@ -3568,18 +3401,6 @@ const DEFAULT_DATA = [
     "targetDir": "lte"
   },
   {
-    "id": 84,
-    "processo": "TECNICO",
-    "resp": "LILIAN",
-    "indicador": "Nº de reuniões do coordenador com cliente",
-    "indice": "número de reuniões realizadas com o coordenador / mês",
-    "meta": ">= 2",
-    "values": {},
-    "targetVal": 2,
-    "targetDir": "gte",
-    "unit": ""
-  },
-  {
     "id": 50,
     "processo": "TECNICO",
     "resp": "LILIAN",
@@ -3660,18 +3481,6 @@ const DEFAULT_DATA = [
       "ABR": 1
     },
     "targetVal": 1,
-    "targetDir": "gte",
-    "unit": "",
-    "processo": "TECNICO"
-  },
-  {
-    "id": 89,
-    "resp": "LUCAS",
-    "indicador": "Nº de reuniões do coordenador com cliente",
-    "indice": "número de reuniões realizadas com o coordenador / mês",
-    "meta": ">= 2",
-    "values": {},
-    "targetVal": 2,
     "targetDir": "gte",
     "unit": "",
     "processo": "TECNICO"
@@ -3927,18 +3736,6 @@ const DEFAULT_DATA = [
     "targetDir": "gte"
   },
   {
-    "id": 95,
-    "processo": "TECNICO",
-    "resp": "VAGNER",
-    "indicador": "Feedbacks Colaborador (trimestral)",
-    "indice": "nº de feedbacks / nº de colaboradores",
-    "meta": "= 100%",
-    "values": {},
-    "targetVal": 1,
-    "targetDir": "gte",
-    "unit": ""
-  },
-  {
     "id": 96,
     "processo": "TECNICO",
     "resp": "VAGNER",
@@ -3948,18 +3745,6 @@ const DEFAULT_DATA = [
     "values": {
       "MAR": 0
     },
-    "targetVal": 1,
-    "targetDir": "gte",
-    "unit": ""
-  },
-  {
-    "id": 97,
-    "processo": "TECNICO",
-    "resp": "VAGNER",
-    "indicador": "Preenchimento time Sheet",
-    "indice": "nº preenchidos aprovados / nº pessoas da diretoria",
-    "meta": "= 100%",
-    "values": {},
     "targetVal": 1,
     "targetDir": "gte",
     "unit": ""
@@ -3980,32 +3765,6 @@ const DEFAULT_DATA = [
     "targetVal": 5,
     "targetDir": "lte",
     "unit": "d"
-  },
-  {
-    "id": 99,
-    "processo": "TECNICO",
-    "resp": "VAGNER",
-    "indicador": "Treinamento mensal - Diretoria Técnica",
-    "indice": "nº de treinamentos / mês",
-    "meta": ">= 1",
-    "values": {
-      "ABR": 1
-    },
-    "targetVal": 1,
-    "targetDir": "gte",
-    "unit": ""
-  },
-  {
-    "id": 100,
-    "processo": "TECNICO",
-    "resp": "VAGNER",
-    "indicador": "Treinamento trimestral - Profitto",
-    "indice": "nº de treinamentos / trimestre",
-    "meta": ">= 1",
-    "values": {},
-    "targetVal": 1,
-    "targetDir": "gte",
-    "unit": ""
   }
 ];
 
@@ -5074,7 +4833,6 @@ function renderPhotoSlide(photoIdxStr) {
   if (phEl && photo) {
     const cap = photoCaption(photo);
     phEl.innerHTML = `
-      <div class="photo-slide-eyebrow">O que vem por aí</div>
       <div class="photo-slide-frame">
         <img src="./fotos/${photo.file}" alt="${cap}" onerror="this.closest('.photo-slide-frame').style.display='none'">
       </div>
