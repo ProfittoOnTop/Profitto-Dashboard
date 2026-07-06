@@ -1,0 +1,47 @@
+name: Gerar manifest de fotos
+
+# Roda automaticamente sempre que alguém subir ou apagar arquivos dentro de /fotos/.
+# Regenera fotos/manifest.json com a lista atual de imagens e faz commit direto no
+# repositorio. Ninguem precisa editar o manifest na mao — so soltar/apagar fotos.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'fotos/**'
+  workflow_dispatch: {} # permite rodar manualmente pela aba Actions, se precisar
+
+permissions:
+  contents: write
+
+jobs:
+  gerar-manifest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar o repositorio
+        uses: actions/checkout@v4
+
+      - name: Gerar fotos/manifest.json
+        run: |
+          cd fotos
+          # Lista jpg/jpeg/png/webp (case-insensitive), ignora o proprio manifest,
+          # ordena por nome e monta um array JSON simples de nomes de arquivo.
+          find . -maxdepth 1 -type f \
+            \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.webp' \) \
+            -printf '%f\n' \
+            | sort \
+            | jq -R -s -c 'split("\n") | map(select(length > 0))' \
+            > manifest.json
+          echo "Conteudo gerado:"
+          cat manifest.json
+
+      - name: Commitar manifest atualizado (se mudou)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add fotos/manifest.json
+          if git diff --cached --quiet; then
+            echo "Nada mudou no manifest — nao ha o que commitar."
+          else
+            git commit -m "chore: atualizar fotos/manifest.json automaticamente"
+            git push
+          fi

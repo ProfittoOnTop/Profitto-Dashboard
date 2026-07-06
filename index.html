@@ -904,6 +904,37 @@ input[type=range]::-webkit-slider-thumb{
   background:rgba(212,169,125,.25);transition:background .3s;
 }
 .pol-dot.active{background:var(--gold);width:8px;height:8px;}
+
+/* —— ITEM 2: GALERIA "O QUE VEM POR AÍ" —————————— */
+.photo-slide-eyebrow{
+  font-size:14px;letter-spacing:.32em;text-transform:uppercase;
+  color:var(--gold);opacity:.85;font-weight:600;margin-bottom:8px;
+}
+.photo-slide-frame{
+  position:relative;
+  max-width:min(920px,80vw);max-height:62vh;
+  border:1px solid rgba(212,169,125,.35);
+  border-radius:16px;overflow:hidden;
+  background:var(--surface);
+  box-shadow:0 24px 60px rgba(0,0,0,.5);
+}
+/* corte diagonal no canto inferior direito — assinatura visual Profitto */
+.photo-slide-frame::after{
+  content:'';position:absolute;right:-1px;bottom:-1px;
+  width:46px;height:46px;
+  background:var(--bg-deep);
+  clip-path:polygon(100% 0, 0 100%, 100% 100%);
+  border-top:1px solid rgba(212,169,125,.35);
+  border-left:1px solid rgba(212,169,125,.35);
+}
+.photo-slide-frame img{
+  display:block;max-width:100%;max-height:62vh;width:auto;height:auto;
+  object-fit:contain;
+}
+.photo-slide-caption{
+  margin-top:20px;font-size:16px;color:var(--gold-light);
+  font-family:'Cormorant Garamond',serif;font-style:italic;letter-spacing:.02em;
+}
 </style>
 </head>
 <body>
@@ -1616,7 +1647,8 @@ input[type=range]::-webkit-slider-thumb{
               <input type="checkbox" id="f-preshidden" style="accent-color:var(--gold);width:16px;height:16px;cursor:pointer">
               <span style="font-size:13px;color:var(--text)">Ocultar este indicador da apresentação padrão</span>
             </label>
-            <div style="font-size:11px;color:var(--text-dim);margin-top:5px;padding-left:2px">Quando marcado, só aparece se selecionado manualmente nas configurações da Gestão à Vista.</div>
+            <div style="font-size:11px;color:var(--text-dim);margin-top:5px;padding-left:2px">Marcar/desmarcar aqui sempre grava uma decisão manual, que passa a valer sobre a ocultação automática de indicadores qualitativos ou sem dados.</div>
+            <div id="f-preshidden-auto-hint" style="font-size:11px;color:var(--warn);margin-top:5px;padding-left:2px;display:none">⚠ Este indicador está oculto automaticamente hoje (qualitativo/sem dados) — ainda não há decisão manual gravada para ele.</div>
           </div>
           <div class="btn-row">
             <button class="btn btn-primary btn-full" onclick="saveIndicador()">Salvar Indicador</button>
@@ -2346,13 +2378,70 @@ input[type=range]::-webkit-slider-thumb{
                   <option value="TECNICO">Técnico</option>
                 </select>
               </div>
-              <div>
-                <div class="form-label" style="margin-bottom:10px">Contagem regressiva</div>
-                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--text)">
-                  <input type="checkbox" id="pres-show-countdown" checked style="accent-color:var(--gold);width:16px;height:16px">
-                  Exibir flip clock (Auditoria Final)
-                </label>
+            </div>
+
+            <!-- RIGHT: indicator selection (restaurado — a marcação existia apenas em JS, nunca em HTML) -->
+            <div>
+              <div class="form-label" style="margin-bottom:10px">Selecionar indicadores</div>
+              <div id="pres-all-hint" style="font-size:12px;color:var(--text-dim);padding:20px;text-align:center">Todos os indicadores visíveis (não ocultados via 📺) serão exibidos.</div>
+              <div id="pres-sel-actions" style="display:none;gap:8px;margin-bottom:10px">
+                <button class="btn btn-ghost btn-sm" onclick="presSelectAll()">Selecionar todos</button>
+                <button class="btn btn-ghost btn-sm" onclick="presSelectNone()">Limpar seleção</button>
               </div>
+              <div class="pres-ind-filter" id="pres-ind-list"></div>
+            </div>
+
+          </div>
+
+          <!-- Item 1: contagem regressiva programável -->
+          <div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--border)">
+            <div class="form-label" style="margin-bottom:10px">Contagem regressiva</div>
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--text);margin-bottom:12px">
+              <input type="checkbox" id="pres-show-countdown" checked onchange="savePresConfig()" style="accent-color:var(--gold);width:16px;height:16px">
+              Exibir flip clock (contagem regressiva) na apresentação
+            </label>
+            <div class="form-grid" style="grid-template-columns:1.4fr 1fr 1fr">
+              <div class="form-row">
+                <label class="form-label">Nome do evento</label>
+                <input class="form-input" id="pres-countdown-title" placeholder="Ex: Auditoria Final" onchange="updateCountdownConfig()">
+              </div>
+              <div class="form-row">
+                <label class="form-label">Data</label>
+                <input class="form-input" type="date" id="pres-countdown-date" onchange="updateCountdownConfig()">
+              </div>
+              <div class="form-row">
+                <label class="form-label">Hora</label>
+                <input class="form-input" type="time" id="pres-countdown-time" onchange="updateCountdownConfig()">
+              </div>
+            </div>
+          </div>
+
+          <!-- Item 2: galeria "O que vem por aí" -->
+          <div style="margin-top:16px;padding-top:20px;border-top:1px solid var(--border)">
+            <div class="form-label" style="margin-bottom:10px">Galeria "O que vem por aí"</div>
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--text);margin-bottom:10px">
+              <input type="checkbox" id="pres-show-photos" checked onchange="updatePhotoConfig()" style="accent-color:var(--gold);width:16px;height:16px">
+              Exibir fotos da pasta <code style="background:var(--bg-deep);color:var(--gold);padding:1px 6px;border-radius:4px;font-size:11px">/fotos/</code> entre os slides
+            </label>
+            <div class="form-row" style="max-width:280px">
+              <label class="form-label">Intercalar 1 foto a cada</label>
+              <select class="form-select" id="pres-photo-interval" onchange="updatePhotoConfig()">
+                <option value="3">3 indicadores</option>
+                <option value="6" selected>6 indicadores</option>
+                <option value="10">10 indicadores</option>
+                <option value="15">15 indicadores</option>
+              </select>
+            </div>
+            <div style="font-size:11px;color:var(--text-dim);margin-top:8px">As fotos são lidas automaticamente de <code style="background:var(--bg-deep);color:var(--gold);padding:1px 6px;border-radius:4px;font-size:11px">/fotos/manifest.json</code>. Basta subir ou apagar imagens na pasta do repositório — o manifest é atualizado sozinho por uma GitHub Action.</div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
 </div>
 
 
@@ -2453,6 +2542,8 @@ input[type=range]::-webkit-slider-thumb{
     <!-- SLIDE ESPECIAL: contagem regressiva (flip clock) -->
     <div class="pres-countdown" id="pres-countdown-slide" style="display:none"></div>
   <div class="pres-countdown" id="pres-pol-slide" style="display:none"></div>
+  <!-- SLIDE ESPECIAL (item 2): galeria "O que vem por aí" -->
+  <div class="pres-countdown" id="pres-photo-slide" style="display:none"></div>
   </div>
 
   <!-- PROGRESS BAR -->
@@ -3949,15 +4040,72 @@ function loadData() {
     DATA = JSON.parse(JSON.stringify(DEFAULT_DATA));
     nextId = Math.max(...DATA.map(d=>d.id)) + 1;
   }
+  migratePresHiddenManual();
+  recomputeAutoHidden();
 }
 
 function saveData() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify({ data: DATA, nextId }));
 }
 
-// Atualiza metas que mudaram em 2026, mesmo que o navegador tenha dados antigos
-// salvos localmente. Só altera quando o valor ainda é o antigo (idempotente).
-// migrateMetas2026: patches removed, data updated directly in DEFAULT_DATA
+// ─── Item 4: ocultar por padrão, na Gestão à Vista, indicadores qualitativos ───
+// ─── ou sem nenhum dado lançado                                            ───
+//
+// Ponto ÚNICO de controle do corte — acrescente 'percentual_meta_1' para também
+// ocultar por padrão percentuais reais com meta=100% (hoje mantidos visíveis,
+// ex.: "Aderência de relatórios mensais", "Taxa de envio de ata").
+const AUTO_HIDE_GROUPS = ['sem_dados', 'qualitativo_binario'];
+
+// Grupo 1: nenhum valor numérico lançado em nenhum mês.
+function isGrupoSemDados(row) {
+  return getLastVal(row) === null;
+}
+// Grupo 2: indicador "sim/não" — meta=1, sem unidade, e todo histórico é 0 ou 1.
+// Ex.: "Artigos mensais (≥1)", "Seminário de Adm. Contratual", "Happy-hours".
+function isGrupoQualitativoBinario(row) {
+  if (row.unit !== '') return false;
+  if (row.targetVal !== 1) return false;
+  const vals = Object.values(row.values || {}).filter(v => typeof v === 'number');
+  if (!vals.length) return false;
+  return vals.every(v => v === 0 || v === 1);
+}
+// Grupo 3 (mantido visível por padrão hoje): percentuais reais com meta=100%,
+// ex.: "Aderência de entrega dos relatórios mensais", "Taxa de envio de ata".
+function isGrupoPercentualMeta1(row) {
+  return row.unit === '%' && row.targetVal === 1;
+}
+function computeAutoHidden(row) {
+  if (AUTO_HIDE_GROUPS.includes('sem_dados') && isGrupoSemDados(row)) return true;
+  if (AUTO_HIDE_GROUPS.includes('qualitativo_binario') && isGrupoQualitativoBinario(row)) return true;
+  if (AUTO_HIDE_GROUPS.includes('percentual_meta_1') && isGrupoPercentualMeta1(row)) return true;
+  return false;
+}
+
+// Roda uma vez por carregamento: para indicadores que JÁ tinham presHidden=true
+// gravado (decisão manual pré-existente, ex.: KPIs financeiros ocultados por
+// sigilo) e ainda não têm presHiddenManual definido, preserva essa decisão como
+// override manual explícito — para não alterar retroativamente o que já estava
+// oculto por escolha humana antes deste recurso existir.
+function migratePresHiddenManual() {
+  DATA.forEach(row => {
+    if (row.presHiddenManual === undefined && row.presHidden === true) {
+      row.presHiddenManual = true;
+    }
+  });
+}
+
+// Recalcula row.presHidden para TODOS os indicadores: override manual
+// (row.presHiddenManual true/false) sempre vence; na ausência de override
+// (undefined/null — nunca foi tocado por um humano), aplica a regra automática
+// dos grupos acima. Chamado após carregar dados e após qualquer edição que possa
+// mudar a classificação (novo indicador, novos valores mensais lançados).
+function recomputeAutoHidden() {
+  DATA.forEach(row => {
+    row.presHidden = (row.presHiddenManual !== undefined && row.presHiddenManual !== null)
+      ? row.presHiddenManual
+      : computeAutoHidden(row);
+  });
+}
 
 function getNumericVals(row) {
   return MONTHS.map(m => {
@@ -4193,13 +4341,19 @@ function renderIndList() {
   document.getElementById('ind-list').innerHTML = DATA.map(row=>{
     const tvOn = !row.presHidden;
     const tvCls = tvOn ? 'tv-on' : 'tv-off';
-    const tvTitle = tvOn ? 'Visível na Gestão à Vista (clique para ocultar)' : 'Oculto na Gestão à Vista (clique para mostrar)';
+    const isManual = row.presHiddenManual !== undefined && row.presHiddenManual !== null;
+    const tvTitle = tvOn
+      ? 'Visível na Gestão à Vista (clique para ocultar)'
+      : (isManual ? 'Oculto manualmente (clique para mostrar)' : 'Oculto automaticamente — qualitativo/sem dados (clique para mostrar)');
     const rowCls = tvOn ? '' : 'tv-hidden';
+    const autoBadge = (!tvOn && !isManual)
+      ? `<span style="font-size:9px;padding:1px 6px;border-radius:8px;background:var(--warn-dim);color:var(--warn);margin-left:6px;letter-spacing:.04em;vertical-align:middle">auto</span>`
+      : '';
     return `
     <div class="ind-item ${rowCls}" onclick="selectIndItem(${row.id})" id="ind-item-${row.id}">
       <div class="ind-dot" style="background:${procColor(row.processo)}"></div>
       <div class="ind-info">
-        <div class="ind-nome">${row.indicador}</div>
+        <div class="ind-nome">${row.indicador}${autoBadge}</div>
         <div class="ind-meta">${row.processo} · ${row.resp} · ${row.meta}</div>
       </div>
       <div class="ind-actions" onclick="event.stopPropagation()">
@@ -4213,7 +4367,11 @@ function renderIndList() {
 function togglePresHidden(id, btn) {
   const row = DATA.find(r => r.id === id);
   if (!row) return;
-  row.presHidden = !row.presHidden;
+  // Item 4: o clique no 📺 sempre grava uma decisão manual explícita
+  // (presHiddenManual), que passa a valer para sempre — inclusive sobrepondo a
+  // ocultação automática de qualitativos/sem dados — até que seja clicado de novo.
+  row.presHiddenManual = !row.presHidden;
+  row.presHidden = row.presHiddenManual;
   const item = document.getElementById('ind-item-' + id);
   if (row.presHidden) {
     btn.classList.remove('tv-on'); btn.classList.add('tv-off');
@@ -4259,6 +4417,8 @@ function clearForm() {
   document.getElementById('f-unit').value='';
   document.getElementById('form-title').textContent='➕ Novo Indicador';
   document.getElementById('f-preshidden').checked = false;
+  const autoHint = document.getElementById('f-preshidden-auto-hint');
+  if (autoHint) autoHint.style.display = 'none';
   document.getElementById('cancel-btn').style.display='none';
   document.querySelectorAll('.ind-item').forEach(el=>el.classList.remove('selected'));
 }
@@ -4281,6 +4441,9 @@ function editIndicador(id) {
   if (item) item.classList.add('selected');
   document.getElementById('f-indicador').focus();
   document.getElementById('f-preshidden').checked = !!row.presHidden;
+  const isManual = row.presHiddenManual !== undefined && row.presHiddenManual !== null;
+  const autoHint = document.getElementById('f-preshidden-auto-hint');
+  if (autoHint) autoHint.style.display = (row.presHidden && !isManual) ? 'block' : 'none';
   showToast('Indicador carregado para edição.','info');
 }
 function saveIndicador() {
@@ -4294,18 +4457,22 @@ function saveIndicador() {
   const unit = document.getElementById('f-unit').value;
   if (!resp||!indicador) { showToast('Preencha pelo menos Responsável e Nome do Indicador.','error'); return; }
   const editId = parseInt(document.getElementById('edit-id').value);
+  // Item 4: o checkbox "ocultar da apresentação" do formulário sempre grava uma
+  // decisão manual explícita (presHiddenManual) — igual ao botão 📺 — para que
+  // a regra automática de qualitativos/sem dados nunca sobrescreva o que o
+  // usuário escolheu conscientemente aqui.
+  const presHiddenManual = document.getElementById('f-preshidden').checked;
   if (editId) {
     const idx = DATA.findIndex(r=>r.id===editId);
     if (idx!==-1) {
-      const presHidden = document.getElementById('f-preshidden').checked;
-      DATA[idx] = {...DATA[idx], processo:proc, resp, indicador, indice, meta, targetVal:tgtVal, targetDir:tgtDir||null, unit, presHidden};
+      DATA[idx] = {...DATA[idx], processo:proc, resp, indicador, indice, meta, targetVal:tgtVal, targetDir:tgtDir||null, unit, presHiddenManual};
       showToast('Indicador atualizado com sucesso!','success');
     }
   } else {
-    const presHiddenNew = document.getElementById('f-preshidden').checked;
-    DATA.push({id:nextId++, processo:proc, resp, indicador, indice, meta, values:{}, targetVal:tgtVal, targetDir:tgtDir||null, unit, presHidden:presHiddenNew});
+    DATA.push({id:nextId++, processo:proc, resp, indicador, indice, meta, values:{}, targetVal:tgtVal, targetDir:tgtDir||null, unit, presHiddenManual});
     showToast('Novo indicador criado!','success');
   }
+  recomputeAutoHidden();
   saveData();
   clearForm();
   renderAdmin();
@@ -4369,6 +4536,10 @@ function saveEntryValues() {
     if (inp && inp.value!=='') row.values[m] = parseFloat(inp.value);
     else if (inp && inp.value==='') delete row.values[m];
   });
+  // Item 4: se este indicador não tem override manual, lançar o primeiro dado
+  // pode tirá-lo do Grupo 1 (sem dados) automaticamente — recalcula todos por
+  // segurança e consistência.
+  recomputeAutoHidden();
   saveData();
   renderDashboard();
   showToast('Dados mensais salvos com sucesso!','success');
@@ -4446,6 +4617,8 @@ function importBackup(input) {
       if (!parsed.data) throw new Error('Formato inválido');
       DATA = parsed.data;
       nextId = parsed.nextId || Math.max(...DATA.map(d=>d.id))+1;
+      migratePresHiddenManual();
+      recomputeAutoHidden();
       saveData();
       renderAdmin();
       renderDashboard();
@@ -4778,6 +4951,7 @@ function applyImport() {
     });
     updated++;
   });
+  recomputeAutoHidden();
   saveData();
   renderDashboard();
   renderAdmin();
@@ -4817,6 +4991,10 @@ let presState = {
   selectedIds: new Set(),
   procFilter: 'ALL',
   showCountdown: true,
+  countdownDate: null,   // ISO string (yyyy-MM-ddTHH:mm) escolhida pelo usuário; null = usa AUDIT_DATE_DEFAULT
+  countdownTitle: null,  // título do evento escolhido pelo usuário; null = usa AUDIT_TITLE_DEFAULT
+  showPhotos: true,      // Item 2: liga/desliga da galeria "O que vem por aí"
+  photoInterval: 6,      // intercala 1 foto a cada N indicadores (mesma lógica dos slides de política)
 };
 let presTimer = null;
 let presTickInterval = null;
@@ -4824,8 +5002,93 @@ let presElapsed = 0;
 let presChart = null;
 let presMouseTimer = null;
 let presCountdownInterval = null;
+// Defaults de fábrica (usados enquanto o usuário não configurar nada pela UI).
 // Data da auditoria final (mês começa em 0 → 5 = junho). Ajuste a hora se necessário.
-const AUDIT_DATE = new Date(2026, 5, 22, 8, 0, 0);
+const AUDIT_DATE_DEFAULT = new Date(2026, 5, 22, 8, 0, 0);
+const AUDIT_TITLE_DEFAULT = 'Auditoria Final';
+// Mantido por compatibilidade com qualquer referência antiga a AUDIT_DATE.
+const AUDIT_DATE = AUDIT_DATE_DEFAULT;
+
+// Retorna a data-alvo da contagem regressiva, priorizando a config do usuário.
+function getConfiguredAuditDate() {
+  if (presState.countdownDate) {
+    const d = new Date(presState.countdownDate);
+    if (!isNaN(d.getTime())) return d;
+  }
+  return AUDIT_DATE_DEFAULT;
+}
+function getConfiguredAuditTitle() {
+  return (presState.countdownTitle && presState.countdownTitle.trim())
+    ? presState.countdownTitle.trim()
+    : AUDIT_TITLE_DEFAULT;
+}
+
+// ─── Item 2: Galeria "O que vem por aí" ─────
+// PHOTOS é preenchido de forma assíncrona por loadPhotosManifest(), lendo
+// ./fotos/manifest.json (mesma origem no GitHub Pages — sem CORS, sem limite de
+// requisições). O manifest é gerado sozinho por uma GitHub Action a cada push que
+// altere a pasta /fotos/ — o usuário só sobe ou apaga imagens, nunca edita o JSON.
+let PHOTOS = [];
+
+async function loadPhotosManifest() {
+  try {
+    const res = await fetch('./fotos/manifest.json', { cache: 'no-store' });
+    if (!res.ok) { PHOTOS = []; return; }
+    const data = await res.json();
+    // Aceita lista simples de nomes de arquivo (formato padrão do gerador) ou,
+    // opcionalmente, objetos {file, caption} para legendas manuais.
+    PHOTOS = (Array.isArray(data) ? data : [])
+      .map(item => {
+        if (typeof item === 'string') return { file: item, caption: null };
+        if (item && typeof item.file === 'string') return { file: item.file, caption: item.caption || null };
+        return null;
+      })
+      .filter(Boolean);
+  } catch (e) {
+    // Manifest ausente, pasta vazia ou rede indisponível: apresentação segue sem fotos.
+    PHOTOS = [];
+  }
+}
+
+function photoCaption(photo) {
+  if (photo.caption) return photo.caption;
+  const base = photo.file.replace(/\.[a-z0-9]+$/i, '');
+  return base
+    .replace(/[-_]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function renderPhotoSlide(photoIdxStr) {
+  const idx = parseInt(photoIdxStr) % Math.max(PHOTOS.length, 1);
+  const photo = PHOTOS[idx];
+  const slideEl = document.getElementById('pres-slide');
+  const cdEl = document.getElementById('pres-countdown-slide');
+  const polEl = document.getElementById('pres-pol-slide');
+  const phEl = document.getElementById('pres-photo-slide');
+  if (slideEl) slideEl.style.display = 'none';
+  if (cdEl) cdEl.style.display = 'none';
+  if (polEl) polEl.style.display = 'none';
+  if (phEl) phEl.style.display = 'flex';
+
+  if (phEl && photo) {
+    const cap = photoCaption(photo);
+    phEl.innerHTML = `
+      <div class="photo-slide-eyebrow">O que vem por aí</div>
+      <div class="photo-slide-frame">
+        <img src="./fotos/${photo.file}" alt="${cap}" onerror="this.closest('.photo-slide-frame').style.display='none'">
+      </div>
+      ${photo.caption ? `<div class="photo-slide-caption">${photo.caption}</div>` : ''}
+    `;
+  }
+
+  const counter = document.getElementById('pres-counter');
+  if (counter) counter.textContent = (presState.currentIdx + 1) + ' / ' + presState.queue.length;
+  const bar = document.getElementById('pres-bar');
+  if (bar) bar.style.width = '0%';
+  if (!presState.paused) startPresTimer();
+}
 
 // ─── Save/load pres config ─────────────────
 function loadPresConfig() {
@@ -4839,6 +5102,10 @@ function loadPresConfig() {
       presState.selectedIds = new Set(c.selectedIds || []);
       presState.procFilter = c.procFilter || 'ALL';
       presState.showCountdown = c.showCountdown !== false;
+      presState.countdownDate = c.countdownDate || null;
+      presState.countdownTitle = c.countdownTitle || null;
+      presState.showPhotos = c.showPhotos !== false;
+      presState.photoInterval = c.photoInterval || 6;
     }
   } catch(e){}
 }
@@ -4850,6 +5117,10 @@ function savePresConfig() {
     selectedIds: [...presState.selectedIds],
     procFilter: presState.procFilter,
     showCountdown: presState.showCountdown,
+    countdownDate: presState.countdownDate,
+    countdownTitle: presState.countdownTitle,
+    showPhotos: presState.showPhotos,
+    photoInterval: presState.photoInterval,
   }));
 }
 
@@ -4871,8 +5142,51 @@ function renderPresConfig() {
   const showCd = document.getElementById('pres-show-countdown');
   if (showCd) showCd.checked = presState.showCountdown !== false;
 
+  // Item 1: campos de data/hora/título do evento
+  const cdDate = document.getElementById('pres-countdown-date');
+  const cdTime = document.getElementById('pres-countdown-time');
+  const cdTitle = document.getElementById('pres-countdown-title');
+  const refDate = getConfiguredAuditDate();
+  if (cdDate) cdDate.value = toDateInputValue(refDate);
+  if (cdTime) cdTime.value = toTimeInputValue(refDate);
+  if (cdTitle) cdTitle.value = getConfiguredAuditTitle();
+
+  // Item 2: liga/desliga e frequência da galeria de fotos
+  const showPh = document.getElementById('pres-show-photos');
+  if (showPh) showPh.checked = presState.showPhotos !== false;
+  const phInt = document.getElementById('pres-photo-interval');
+  if (phInt) phInt.value = presState.photoInterval || 6;
+
   renderPresIndList();
   togglePresIndList();
+}
+
+function toDateInputValue(d) {
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function toTimeInputValue(d) {
+  return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+}
+
+// Chamado pelos inputs de data/hora/título da contagem regressiva (item 1)
+function updateCountdownConfig() {
+  const cdDate = document.getElementById('pres-countdown-date');
+  const cdTime = document.getElementById('pres-countdown-time');
+  const cdTitle = document.getElementById('pres-countdown-title');
+  const dateVal = cdDate ? cdDate.value : '';
+  const timeVal = cdTime && cdTime.value ? cdTime.value : '08:00';
+  presState.countdownDate = dateVal ? (dateVal + 'T' + timeVal + ':00') : null;
+  presState.countdownTitle = cdTitle && cdTitle.value.trim() ? cdTitle.value.trim() : null;
+  savePresConfig();
+}
+
+// Chamado pelo liga/desliga e intervalo da galeria de fotos (item 2)
+function updatePhotoConfig() {
+  const showPh = document.getElementById('pres-show-photos');
+  const phInt = document.getElementById('pres-photo-interval');
+  presState.showPhotos = showPh ? showPh.checked : true;
+  presState.photoInterval = phInt ? (parseInt(phInt.value) || 6) : 6;
+  savePresConfig();
 }
 
 function renderPresIndList() {
@@ -4882,9 +5196,12 @@ function renderPresIndList() {
   const filtered = procF === 'ALL' ? DATA : DATA.filter(d => d.processo === procF);
   list.innerHTML = filtered.map(row => {
     const checked = presState.selectedIds.has(row.id);
-    const hiddenBadge = row.presHidden
-      ? `<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:var(--danger-dim);color:var(--danger);margin-left:6px;letter-spacing:.04em">oculto padrão</span>`
-      : '';
+    const isManual = row.presHiddenManual !== undefined && row.presHiddenManual !== null;
+    const hiddenBadge = !row.presHidden ? '' : (
+      isManual
+        ? `<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:var(--danger-dim);color:var(--danger);margin-left:6px;letter-spacing:.04em">oculto manual</span>`
+        : `<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:var(--warn-dim);color:var(--warn);margin-left:6px;letter-spacing:.04em">oculto automático</span>`
+    );
     return `<div class="pres-ind-row">
       <div class="pres-ind-cb ${checked?'checked':''}" onclick="togglePresInd(${row.id},this)">
         ${checked ? '✓' : ''}
@@ -4953,15 +5270,17 @@ function buildPresQueue() {
 
   let pool = [...DATA];
   if (presState.procFilter !== 'ALL') pool = pool.filter(d => d.processo === presState.procFilter);
+  // CORREÇÃO (item 3): o toggle 📺 (row.presHidden) agora é SEMPRE respeitado, em
+  // qualquer modo. Antes, o modo "Selecionar manualmente" IGNORAVA presHidden por
+  // completo (usava só selectedIds), então clicar em 📺 parecia funcionar (toast +
+  // linha escurecida) mas não tinha nenhum efeito real na apresentação para
+  // indicadores presentes em selectedIds — daí o botão parecer "travado".
+  pool = pool.filter(d => !d.presHidden);
   if (presState.which === 'select' && presState.selectedIds.size > 0) {
-    // Manual selection: show exactly what was chosen, regardless of presHidden
+    // Seleção manual agora é um recorte ADICIONAL dentro do que já está visível
+    // (interseção), nunca uma substituição do que 📺 já decidiu ocultar.
     pool = pool.filter(d => presState.selectedIds.has(d.id));
-  } else {
-    // Default mode: respect presHidden flag
-    pool = pool.filter(d => !d.presHidden);
   }
-  // Only show indicators that have at least some data
-  pool = pool.filter(d => Object.keys(d.values||{}).length > 0 || true); // show all, even empty
 
   if (pool.length === 0) {
     showToast('Nenhum indicador para apresentar com a configuração atual.', 'error');
@@ -4997,7 +5316,33 @@ function buildPresQueue() {
   // Adiciona restantes ao final
   while (polIdx < polSlides.length) withPol.push(polSlides[polIdx++]);
 
-  return [...prefix, ...withPol];
+  // Item 2: intercala fotos de /fotos/ ("O que vem por aí") a cada N indicadores.
+  // PHOTOS é carregado de forma assíncrona em loadPhotosManifest(); se a busca falhar
+  // ou a pasta estiver vazia, PHOTOS fica [] e nenhum slide de foto é inserido — a
+  // apresentação segue normalmente, sem quebrar.
+  const showPh = document.getElementById('pres-show-photos');
+  if (showPh) presState.showPhotos = showPh.checked;
+  const phInt = document.getElementById('pres-photo-interval');
+  if (phInt) presState.photoInterval = parseInt(phInt.value) || presState.photoInterval || 6;
+
+  let withPhotos = withPol;
+  if (presState.showPhotos && PHOTOS.length > 0) {
+    withPhotos = [];
+    const phInterval = Math.max(1, presState.photoInterval || 6);
+    let indicatorCount = 0, photoIdx = 0;
+    withPol.forEach(item => {
+      withPhotos.push(item);
+      if (typeof item === 'number') {
+        indicatorCount++;
+        if (indicatorCount % phInterval === 0) {
+          withPhotos.push('photo-' + (photoIdx % PHOTOS.length));
+          photoIdx++;
+        }
+      }
+    });
+  }
+
+  return [...prefix, ...withPhotos];
 }
 
 // ─── Start / Stop ──────────────────────────
@@ -5133,14 +5478,18 @@ function renderPresSlide() {
   if (id === 'countdown')        { renderCountdownSlide(); return; }
   const polMatch = typeof id === 'string' && id.match(/^pol-(\d+)$/);
   if (polMatch) { renderPolSlide(+polMatch[1]); return; }
+  const photoMatch = typeof id === 'string' && id.match(/^photo-(\d+)$/);
+  if (photoMatch) { renderPhotoSlide(photoMatch[1]); return; }
 
   // garante que o layout normal (indicador) esteja visível
   const slideEl = document.getElementById('pres-slide');
   const cdEl = document.getElementById('pres-countdown-slide');
   const polEl = document.getElementById('pres-pol-slide');
+  const phEl = document.getElementById('pres-photo-slide');
   if (slideEl) slideEl.style.display = '';
   if (cdEl) cdEl.style.display = 'none';
   if (polEl) polEl.style.display = 'none';
+  if (phEl) phEl.style.display = 'none';
 
   const row = DATA.find(d => d.id === id);
   if (!row) { presNav(1); return; }
@@ -5221,9 +5570,11 @@ function renderPolSlide(n) {           // n = 1..6
   const slideEl = document.getElementById('pres-slide');
   const cdEl    = document.getElementById('pres-countdown-slide');
   const polEl   = document.getElementById('pres-pol-slide');
+  const phEl    = document.getElementById('pres-photo-slide');
   if (slideEl) slideEl.style.display = 'none';
   if (cdEl)    cdEl.style.display    = 'none';
   if (polEl)   polEl.style.display   = 'flex';
+  if (phEl)    phEl.style.display    = 'none';
 
   const dots = POL_NUMS.map((_, i) =>
     `<div class="pol-dot${i === idx ? ' active' : ''}"></div>`).join('');
@@ -5252,7 +5603,7 @@ function clearCountdown() {
 }
 
 function getCountdownParts() {
-  let diff = AUDIT_DATE.getTime() - Date.now();
+  let diff = getConfiguredAuditDate().getTime() - Date.now();
   if (diff < 0) diff = 0;
   const totalSec = Math.floor(diff / 1000);
   const days = Math.floor(totalSec / 86400);
@@ -5349,28 +5700,44 @@ function tickCountdown() {
 function renderCountdownSlide() {
   const slideEl = document.getElementById('pres-slide');
   const cdEl = document.getElementById('pres-countdown-slide');
+  const polEl = document.getElementById('pres-pol-slide');
+  const phEl = document.getElementById('pres-photo-slide');
   if (slideEl) slideEl.style.display = 'none';
+  if (polEl) polEl.style.display = 'none';
+  if (phEl) phEl.style.display = 'none';
   if (cdEl) cdEl.style.display = 'flex';
 
-  // monta a estrutura (ou reconstrói se não existir)
-  if (cdEl && !document.getElementById('fc-d-t')) {
-    const d = AUDIT_DATE;
+  // Item 1: data e título vêm da configuração do usuário (getConfiguredAuditDate/Title),
+  // com fallback para os defaults de fábrica. Reconstrói o cabeçalho (título/data) a
+  // cada chamada — só o esqueleto do flip clock (cartões) é montado uma única vez,
+  // para não reiniciar a animação sempre que o slide reaparece na fila.
+  if (cdEl) {
+    const d = getConfiguredAuditDate();
+    const title = getConfiguredAuditTitle();
     const dataFmt = String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear();
-    cdEl.innerHTML = `
-      <div class="fc-eyebrow">Contagem regressiva</div>
-      <div class="fc-title">Auditoria Final</div>
-      <div class="fc-date">${dataFmt}</div>
-      <div class="fc-clock">
-        ${groupHTML('fc-d','Dias')}
-        <div class="fc-sep">:</div>
-        ${groupHTML('fc-h','Horas')}
-        <div class="fc-sep">:</div>
-        ${groupHTML('fc-m','Minutos')}
-        <div class="fc-sep">:</div>
-        ${groupHTML('fc-s','Segundos')}
-      </div>
-      <div class="fc-msg" id="fc-msg"></div>
-    `;
+
+    if (!document.getElementById('fc-d-t')) {
+      cdEl.innerHTML = `
+        <div class="fc-eyebrow">Contagem regressiva</div>
+        <div class="fc-title" id="fc-title">${title}</div>
+        <div class="fc-date" id="fc-date">${dataFmt}</div>
+        <div class="fc-clock">
+          ${groupHTML('fc-d','Dias')}
+          <div class="fc-sep">:</div>
+          ${groupHTML('fc-h','Horas')}
+          <div class="fc-sep">:</div>
+          ${groupHTML('fc-m','Minutos')}
+          <div class="fc-sep">:</div>
+          ${groupHTML('fc-s','Segundos')}
+        </div>
+        <div class="fc-msg" id="fc-msg"></div>
+      `;
+    } else {
+      const titleEl = document.getElementById('fc-title');
+      const dateEl = document.getElementById('fc-date');
+      if (titleEl) titleEl.textContent = title;
+      if (dateEl) dateEl.textContent = dataFmt;
+    }
   }
 
   // counter + barra
@@ -5558,6 +5925,7 @@ function saveToFile() {
 // ============================================================
 loadData();
 renderDashboard();
+loadPhotosManifest(); // item 2: busca assíncrona, não bloqueia o carregamento da página
 
 </script>
 
