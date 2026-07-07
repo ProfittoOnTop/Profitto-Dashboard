@@ -3931,13 +3931,21 @@ function statusHTML(s) {
   if (s==='unmet') return '<span class="status st-unmet"><span class="status-dot"></span>Abaixo</span>';
   return '<span class="status st-na"><span class="status-dot"></span>Qualitat.</span>';
 }
+// Converte horas decimais (ex.: 4.5) pro formato "4h30" — bate o olho sem
+// precisar calcular quanto é ",5" em minutos.
+function fmtHoras(v) {
+  let hh = Math.floor(v);
+  let mm = Math.round((v - hh) * 60);
+  if (mm === 60) { mm = 0; hh += 1; }
+  return `${hh}h${String(mm).padStart(2,'0')}`;
+}
 function fmtVal(v, row) {
   if (v===null) return '—';
   const isP = row.unit==='%';
   if (isP) return (v*100).toFixed(1)+'%';
   if (row.unit==='Mi R$') return 'R$'+v.toFixed(2)+'Mi';
   if (row.unit==='d') return v.toFixed(1)+'d';
-  if (row.unit==='h') return v.toFixed(1)+'h';
+  if (row.unit==='h') return fmtHoras(v);
   return Number.isInteger(v) ? String(v) : v.toFixed(2);
 }
 function valClass(v, row) {
@@ -4122,7 +4130,7 @@ function buildDetailChart(row, vals) {
     options:{responsive:true,maintainAspectRatio:false,
       plugins:{legend:{labels:{color:'#7a8aaa',font:{family:'DM Sans',size:12},boxWidth:16}},
         tooltip:{backgroundColor:'#0f1626',borderColor:'#1e2d4a',borderWidth:1,titleColor:'#e8edf5',bodyColor:'#7a8aaa',padding:12,
-          callbacks:{label:ctx=>{const v=ctx.raw;if(v===null) return 'Sem dados';return ` ${v}${isP?'%':row.unit||''}`}}}},
+          callbacks:{label:ctx=>{const v=ctx.raw;if(v===null) return 'Sem dados';if(row.unit==='h') return ' '+fmtHoras(v);return ` ${v}${isP?'%':row.unit||''}`}}}},
       scales:{
         x:{grid:{color:'#1e2d4a'},ticks:{color:'#7a8aaa',font:{family:'DM Sans',size:11}}},
         y:{grid:{color:'#1e2d4a'},ticks:{color:'#7a8aaa',font:{family:'DM Sans',size:11},callback:v=>isP?v+'%':v}}
@@ -5648,6 +5656,7 @@ function buildPresChart(row, vals) {
             label: ctx => {
               const v = ctx.raw;
               if (v === null) return 'Sem dados';
+              if (row.unit === 'h') return ' ' + fmtHoras(v);
               return ` ${v}${isP ? '%' : (row.unit || '')}`;
             }
           }
