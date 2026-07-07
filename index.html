@@ -1628,6 +1628,7 @@ input[type=range]::-webkit-slider-thumb{
                 <option value="%">Percentual (%)</option>
                 <option value="Mi R$">Mi R$</option>
                 <option value="d">Dias</option>
+                <option value="h">Horas (h)</option>
               </select>
             </div>
           </div>
@@ -2593,7 +2594,7 @@ input[type=range]::-webkit-slider-thumb{
 // CONSTANTS
 // ============================================================
 const MONTHS = ['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
-const STORAGE_KEY = 'profitto_indicadores_v3'; // v3 = dados 2026
+const STORAGE_KEY = 'profitto_indicadores_v4'; // v4 = correção de escala do Academia CEO + ocultação de EBITDA/Seminários
 
 // ============================================================
 // DEFAULT DATA
@@ -2711,14 +2712,14 @@ const DEFAULT_DATA = [
     "indice": "horas / mês",
     "meta": ">= 4",
     "values": {
-      "JAN": 0.1667,
+      "JAN": 4.0,
       "FEV": 0,
-      "MAR": 0.2535,
-      "ABR": 0.1667
+      "MAR": 6.08,
+      "ABR": 4.0
     },
     "targetVal": 4,
     "targetDir": "gte",
-    "unit": ""
+    "unit": "h"
   },
   {
     "id": 60,
@@ -2769,7 +2770,8 @@ const DEFAULT_DATA = [
     },
     "targetVal": 1,
     "targetDir": "gte",
-    "unit": ""
+    "unit": "",
+    "presHiddenManual": true
   },
   {
     "id": 11,
@@ -2836,7 +2838,8 @@ const DEFAULT_DATA = [
     },
     "unit": "",
     "targetVal": 1,
-    "targetDir": "gte"
+    "targetDir": "gte",
+    "presHiddenManual": true
   },
   {
     "id": 16,
@@ -2895,14 +2898,14 @@ const DEFAULT_DATA = [
     "indice": "horas / mês (com apresentação de resenha)",
     "meta": ">= 4",
     "values": {
-      "JAN": 0.1875,
+      "JAN": 4.5,
       "FEV": 0,
-      "MAR": 0.0694,
-      "ABR": 0.1042
+      "MAR": 1.67,
+      "ABR": 2.5
     },
     "targetVal": 4,
     "targetDir": "gte",
-    "unit": ""
+    "unit": "h"
   },
   {
     "id": 68,
@@ -3014,13 +3017,13 @@ const DEFAULT_DATA = [
     "meta": ">= 4",
     "values": {
       "JAN": 0,
-      "FEV": 0.2347,
-      "MAR": 0.1812,
-      "ABR": 0.2097
+      "FEV": 5.63,
+      "MAR": 4.35,
+      "ABR": 5.03
     },
     "targetVal": 4,
     "targetDir": "gte",
-    "unit": ""
+    "unit": "h"
   },
   {
     "id": 59,
@@ -3194,7 +3197,8 @@ const DEFAULT_DATA = [
     },
     "targetVal": 0.3,
     "targetDir": "gte",
-    "unit": "%"
+    "unit": "%",
+    "presHiddenManual": true
   },
   {
     "id": 55,
@@ -3205,13 +3209,13 @@ const DEFAULT_DATA = [
     "meta": ">= 4",
     "values": {
       "JAN": 0,
-      "FEV": 0.1903,
-      "MAR": 0.1917,
-      "ABR": 0.2076
+      "FEV": 4.57,
+      "MAR": 4.6,
+      "ABR": 4.98
     },
     "targetVal": 4,
     "targetDir": "gte",
-    "unit": ""
+    "unit": "h"
   },
   {
     "id": 39,
@@ -3245,7 +3249,8 @@ const DEFAULT_DATA = [
     },
     "unit": "",
     "targetVal": 1,
-    "targetDir": "gte"
+    "targetDir": "gte",
+    "presHiddenManual": true
   },
   {
     "id": 36,
@@ -3323,14 +3328,14 @@ const DEFAULT_DATA = [
     "indice": "horas / mês",
     "meta": ">= 4",
     "values": {
-      "JAN": 0.2236,
-      "FEV": 0.2146,
-      "MAR": 0.2278,
-      "ABR": 0.1667
+      "JAN": 5.37,
+      "FEV": 5.15,
+      "MAR": 5.47,
+      "ABR": 4.0
     },
     "targetVal": 4,
     "targetDir": "gte",
-    "unit": ""
+    "unit": "h"
   },
   {
     "id": 40,
@@ -3364,7 +3369,8 @@ const DEFAULT_DATA = [
     },
     "unit": "",
     "targetVal": 1,
-    "targetDir": "gte"
+    "targetDir": "gte",
+    "presHiddenManual": true
   },
   {
     "id": 37,
@@ -3442,13 +3448,13 @@ const DEFAULT_DATA = [
     "meta": ">= 4",
     "values": {
       "JAN": 0,
-      "FEV": 0.1667,
-      "MAR": 0.241,
+      "FEV": 4.0,
+      "MAR": 5.78,
       "ABR": 0
     },
     "targetVal": 4,
     "targetDir": "gte",
-    "unit": "",
+    "unit": "h",
     "processo": "TECNICO"
   },
   {
@@ -3517,7 +3523,8 @@ const DEFAULT_DATA = [
     "targetVal": 1,
     "targetDir": "gte",
     "unit": "",
-    "processo": "TECNICO"
+    "processo": "TECNICO",
+    "presHiddenManual": true
   },
   {
     "id": 92,
@@ -3563,12 +3570,12 @@ const DEFAULT_DATA = [
     "values": {
       "JAN": 0,
       "FEV": 0,
-      "MAR": 0.1667,
-      "ABR": 0.1667
+      "MAR": 4.0,
+      "ABR": 4.0
     },
     "targetVal": 4,
     "targetDir": "gte",
-    "unit": ""
+    "unit": "h"
   },
   {
     "id": 41,
@@ -3602,7 +3609,8 @@ const DEFAULT_DATA = [
     },
     "targetVal": 1,
     "targetDir": "gte",
-    "unit": ""
+    "unit": "",
+    "presHiddenManual": true
   },
   {
     "id": 38,
@@ -3929,6 +3937,7 @@ function fmtVal(v, row) {
   if (isP) return (v*100).toFixed(1)+'%';
   if (row.unit==='Mi R$') return 'R$'+v.toFixed(2)+'Mi';
   if (row.unit==='d') return v.toFixed(1)+'d';
+  if (row.unit==='h') return v.toFixed(1)+'h';
   return Number.isInteger(v) ? String(v) : v.toFixed(2);
 }
 function valClass(v, row) {

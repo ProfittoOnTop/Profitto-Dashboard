@@ -96,13 +96,17 @@ function parseCellValue(raw, existingValues) {
   const existingIsString = Object.values(existingValues || {}).some(v => typeof v === 'string');
   if (existingIsString) return { value: text };
 
-  // Duração "H:MM" ou "HH:MM" (ex.: Academia CEO) — o dashboard já guarda
-  // isso como fração de dia (horas/24), igual o Excel guarda internamente.
+  // Duração "H:MM" ou "HH:MM" (ex.: Academia CEO) — o dashboard guarda como
+  // horas decimais (4:30 → 4.5), não como fração de dia. Usar (hh+mm/60)/24
+  // (a convenção interna do Excel para células de hora) faz o valor virar
+  // ~40x menor que a meta e o indicador aparecer sempre "abaixo da meta"
+  // mesmo quando a meta quase sempre é batida — bug real encontrado e
+  // corrigido em 2026-07-07.
   const timeMatch = text.match(/^(\d{1,3}):(\d{2})$/);
   if (timeMatch) {
     const hh = parseInt(timeMatch[1], 10);
     const mm = parseInt(timeMatch[2], 10);
-    return { value: (hh + mm / 60) / 24 };
+    return { value: +(hh + mm / 60).toFixed(2) };
   }
 
   // Percentual "75%" / "6,38%" — dashboard guarda como fração (0.75, 0.0638).
