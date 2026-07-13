@@ -2374,7 +2374,7 @@ input[type=range]::-webkit-slider-thumb{
                 <div class="form-label" style="margin-bottom:10px">Tempo por slide</div>
                 <div class="range-row">
                   <span style="font-size:12px;color:var(--text-muted)">5s</span>
-                  <input type="range" id="pres-duration" min="5" max="60" step="5" value="15" oninput="document.getElementById('pres-dur-val').textContent=this.value+'s'">
+                  <input type="range" id="pres-duration" min="5" max="60" step="5" value="15" oninput="document.getElementById('pres-dur-val').textContent=this.value+'s'" onchange="onPresDurationChange(this)">
                   <span style="font-size:12px;color:var(--text-muted)">60s</span>
                   <div class="range-val" id="pres-dur-val">15s</div>
                 </div>
@@ -2383,10 +2383,10 @@ input[type=range]::-webkit-slider-thumb{
                 <div class="form-label" style="margin-bottom:10px">Ordem de exibição</div>
                 <div style="display:flex;flex-direction:column;gap:8px">
                   <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--text)">
-                    <input type="radio" name="pres-order" value="sequential" checked="" style="accent-color:var(--gold)"> Em sequência
+                    <input type="radio" name="pres-order" value="sequential" checked="" onchange="onPresOrderChange(this)" style="accent-color:var(--gold)"> Em sequência
                   </label>
                   <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--text)">
-                    <input type="radio" name="pres-order" value="random" style="accent-color:var(--gold)"> Aleatória
+                    <input type="radio" name="pres-order" value="random" onchange="onPresOrderChange(this)" style="accent-color:var(--gold)"> Aleatória
                   </label>
                 </div>
               </div>
@@ -2394,16 +2394,16 @@ input[type=range]::-webkit-slider-thumb{
                 <div class="form-label" style="margin-bottom:10px">Indicadores a exibir</div>
                 <div style="display:flex;flex-direction:column;gap:8px">
                   <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--text)">
-                    <input type="radio" name="pres-which" value="all" checked="" onchange="togglePresIndList()" style="accent-color:var(--gold)"> Todos os indicadores
+                    <input type="radio" name="pres-which" value="all" checked="" onchange="togglePresIndList();onPresWhichChange(this)" style="accent-color:var(--gold)"> Todos os indicadores
                   </label>
                   <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--text)">
-                    <input type="radio" name="pres-which" value="select" onchange="togglePresIndList()" style="accent-color:var(--gold)"> Selecionar manualmente
+                    <input type="radio" name="pres-which" value="select" onchange="togglePresIndList();onPresWhichChange(this)" style="accent-color:var(--gold)"> Selecionar manualmente
                   </label>
                 </div>
               </div>
               <div>
                 <div class="form-label" style="margin-bottom:10px">Filtrar por processo</div>
-                <select class="form-select" id="pres-proc-filter" style="font-size:13px">
+                <select class="form-select" id="pres-proc-filter" style="font-size:13px" onchange="onPresProcFilterChange(this)">
                   <option value="ALL">Todos os processos</option>
                   <option value="COMERCIAL">Comercial</option>
                   <option value="JURIDICO">Jurídico</option>
@@ -2431,7 +2431,7 @@ input[type=range]::-webkit-slider-thumb{
           <div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--border)">
             <div class="form-label" style="margin-bottom:10px">Contagem regressiva</div>
             <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--text);margin-bottom:12px">
-              <input type="checkbox" id="pres-show-countdown" checked onchange="savePresConfig()" style="accent-color:var(--gold);width:16px;height:16px">
+              <input type="checkbox" id="pres-show-countdown" checked onchange="presState.showCountdown=this.checked;schedulePresConfigSync()" style="accent-color:var(--gold);width:16px;height:16px">
               Exibir flip clock (contagem regressiva) na apresentação
             </label>
             <div class="form-grid" style="grid-template-columns:1.4fr 1fr 1fr">
@@ -3858,6 +3858,7 @@ const GH_OWNER = 'ProfittoOnTop';
 const GH_REPO = 'Profitto-Dashboard';
 const GH_BRANCH = 'main';
 const GH_OVERRIDES_PATH = 'dados/admin-overrides.json';
+const GH_PRESCONFIG_PATH = 'config/pres-config.json';
 const GH_TOKEN_KEY = 'profitto_gh_token';
 
 function getGhToken() {
@@ -3931,49 +3932,83 @@ async function ghApiRequest(path, opts = {}) {
     },
   });
 }
-async function ghGetOverridesFile() {
-  const res = await ghApiRequest(`contents/${GH_OVERRIDES_PATH}?ref=${GH_BRANCH}`);
-  if (res.status === 404) return { sha: null, json: { rows: {}, nextId: null } };
+async function ghGetJsonFile(path) {
+  const res = await ghApiRequest(`contents/${path}?ref=${GH_BRANCH}`);
+  if (res.status === 404) return { sha: null, json: null };
   if (!res.ok) throw new Error(`GET falhou (${res.status})`);
   const body = await res.json();
   return { sha: body.sha, json: JSON.parse(b64ToUtf8(body.content)) };
 }
-async function ghPutOverridesFile(json, sha, message) {
-  return ghApiRequest(`contents/${GH_OVERRIDES_PATH}`, {
+async function ghPutJsonFile(path, json, sha, message) {
+  return ghApiRequest(`contents/${path}`, {
     method: 'PUT',
     body: JSON.stringify({ message, content: utf8ToB64(JSON.stringify(json, null, 2)), sha: sha || undefined, branch: GH_BRANCH }),
   });
 }
 
-// Grava a versão ATUAL da linha `id` (indicador completo, ou {deleted:true})
-// no arquivo compartilhado. Lê-modifica-grava com retry: se outra TV/navegador
-// comitou entre nossa leitura e escrita, a API responde 409 (sha desatualizado)
-// — nesse caso, relê e tenta de novo, até 5x. Nunca lança erro pra quem chamou:
-// se falhar, avisa por toast e a mudança fica só neste navegador (igual ao
-// comportamento de antes desta funcionalidade existir).
-async function syncRowToGitHub(id, rowOrTombstone) {
+// Lê-modifica-grava genérico com retry em conflito de sha (409 — outra
+// TV/navegador comitou entre nossa leitura e escrita: relê e tenta de novo,
+// até 5x). `mutateFn(jsonAtual|null)` devolve o JSON completo a gravar.
+// Nunca lança erro pra quem chamou: se falhar, avisa por toast e a mudança
+// fica só neste navegador (comportamento de antes desta funcionalidade
+// existir). Devolve true/false conforme o commit foi ou não bem-sucedido.
+async function ghCommitJsonWithRetry(path, mutateFn, message) {
   const token = getGhToken();
-  if (!token) return; // sem token configurado: silencioso, comportamento local de sempre
+  if (!token) return false; // sem token configurado: silencioso, comportamento local de sempre
   for (let attempt = 1; attempt <= 5; attempt++) {
     try {
-      const { sha, json } = await ghGetOverridesFile();
-      json.rows = json.rows || {};
-      json.rows[id] = rowOrTombstone;
-      if (typeof nextId === 'number') json.nextId = Math.max(json.nextId || 0, nextId);
-      const msg = rowOrTombstone && rowOrTombstone.deleted
-        ? `chore: excluir indicador ${id} via Admin`
-        : `chore: atualizar indicador ${id} via Admin`;
-      const res = await ghPutOverridesFile(json, sha, msg);
+      const { sha, json } = await ghGetJsonFile(path);
+      const mutated = mutateFn(json);
+      const res = await ghPutJsonFile(path, mutated, sha, message);
       if (res.status === 409) continue; // conflito de sha — relê e tenta de novo
-      if (res.status === 401 || res.status === 403) { showToast('Token do GitHub inválido/sem permissão — mudança ficou só neste navegador.', 'error'); return; }
+      if (res.status === 401 || res.status === 403) { showToast('Token do GitHub inválido/sem permissão — mudança ficou só neste navegador.', 'error'); return false; }
       if (!res.ok) { const t = await res.text(); throw new Error(`${res.status}: ${t.slice(0,200)}`); }
-      showToast('Sincronizado com as outras TVs.', 'success');
-      return;
+      return true;
     } catch (e) {
-      if (attempt === 5) { showToast('Falha ao sincronizar com o GitHub (' + e.message + ') — mudança ficou só neste navegador.', 'error'); return; }
+      if (attempt === 5) { showToast('Falha ao sincronizar com o GitHub (' + e.message + ') — mudança ficou só neste navegador.', 'error'); return false; }
     }
   }
   showToast('Não foi possível sincronizar (conflito persistente) — tente salvar de novo.', 'error');
+  return false;
+}
+
+// Grava a versão ATUAL da linha `id` (indicador completo, ou {deleted:true})
+// em dados/admin-overrides.json.
+async function syncRowToGitHub(id, rowOrTombstone) {
+  const ok = await ghCommitJsonWithRetry(
+    GH_OVERRIDES_PATH,
+    (json) => {
+      const base = json || { rows: {}, nextId: null };
+      base.rows = base.rows || {};
+      base.rows[id] = rowOrTombstone;
+      if (typeof nextId === 'number') base.nextId = Math.max(base.nextId || 0, nextId);
+      return base;
+    },
+    rowOrTombstone && rowOrTombstone.deleted ? `chore: excluir indicador ${id} via Admin` : `chore: atualizar indicador ${id} via Admin`
+  );
+  if (ok) showToast('Sincronizado com as outras TVs.', 'success');
+}
+
+// Grava a configuração ATUAL da apresentação (título/data da contagem,
+// duração, ordem, filtro, fotos etc.) em config/pres-config.json — sempre uma
+// foto completa (não um diff), mesma lógica de last-write-wins do overrides
+// de indicadores. Chamada com debounce (schedulePresConfigSync) pra não
+// disparar um commit por pixel arrastado no slider de duração ou por clique
+// em cada indicador da lista de seleção manual.
+async function syncPresConfigToGitHub() {
+  const ok = await ghCommitJsonWithRetry(
+    GH_PRESCONFIG_PATH,
+    () => serializePresConfig(),
+    'chore: atualizar configuração da apresentação via Admin'
+  );
+  if (ok) showToast('Configuração sincronizada com as outras TVs.', 'success');
+}
+
+let presConfigSyncTimer = null;
+function schedulePresConfigSync() {
+  savePresConfig(); // localStorage deste navegador, sempre e imediato
+  clearTimeout(presConfigSyncTimer);
+  presConfigSyncTimer = setTimeout(syncPresConfigToGitHub, 1500);
 }
 
 // Aplica dados/admin-overrides.json por cima do DATA já carregado — criações,
@@ -5207,7 +5242,7 @@ function updateCountdownConfig() {
   const timeVal = cdTime && cdTime.value ? cdTime.value : '08:00';
   presState.countdownDate = dateVal ? (dateVal + 'T' + timeVal + ':00') : null;
   presState.countdownTitle = cdTitle && cdTitle.value.trim() ? cdTitle.value.trim() : null;
-  savePresConfig();
+  schedulePresConfigSync();
 }
 
 // Chamado pelo liga/desliga e intervalo da galeria de fotos (item 2)
@@ -5216,7 +5251,28 @@ function updatePhotoConfig() {
   const phInt = document.getElementById('pres-photo-interval');
   presState.showPhotos = showPh ? showPh.checked : true;
   presState.photoInterval = phInt ? (parseInt(phInt.value) || 6) : 6;
-  savePresConfig();
+  schedulePresConfigSync();
+}
+
+// Chamados pelos controles de duração/ordem/quais indicadores/filtro de
+// processo — únicos pontos onde essas configurações são salvas fora do fluxo
+// de clicar "▶ Iniciar" (que roda também automaticamente no boot da página,
+// então NUNCA deve disparar sincronização sozinho).
+function onPresDurationChange(el) {
+  presState.duration = parseInt(el.value) || presState.duration;
+  schedulePresConfigSync();
+}
+function onPresOrderChange(el) {
+  presState.order = el.value;
+  schedulePresConfigSync();
+}
+function onPresWhichChange(el) {
+  presState.which = el.value;
+  schedulePresConfigSync();
+}
+function onPresProcFilterChange(el) {
+  presState.procFilter = el.value;
+  schedulePresConfigSync();
 }
 
 function renderPresIndList() {
@@ -5254,6 +5310,7 @@ function togglePresInd(id, el) {
     el.classList.add('checked');
     el.textContent = '✓';
   }
+  schedulePresConfigSync();
 }
 
 function togglePresIndList() {
@@ -5281,10 +5338,12 @@ function togglePresIndList() {
 function presSelectAll() {
   DATA.forEach(d => presState.selectedIds.add(d.id));
   renderPresIndList();
+  schedulePresConfigSync();
 }
 function presSelectNone() {
   presState.selectedIds.clear();
   renderPresIndList();
+  schedulePresConfigSync();
 }
 
 // ─── Build queue ───────────────────────────
