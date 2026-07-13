@@ -541,8 +541,12 @@ tbody td{padding:14px 16px;font-size:13px;vertical-align:middle}
 }
 
 /* The actual slide card */
+/* max-width era fixo em 1400px — em telas grandes (TV) isso deixava uma
+   margem enorme sem uso; agora escala com a tela (mesma ideia do
+   #pres-photo-slide abaixo), com um teto só pra não ficar absurdo em
+   telas ultrawide. */
 .pres-slide{
-  width:100%;max-width:1400px;
+  width:100%;max-width:min(2000px,94vw);
   display:grid;
   grid-template-columns:1fr 1.1fr;
   gap:0;
@@ -560,41 +564,42 @@ tbody td{padding:14px 16px;font-size:13px;vertical-align:middle}
 }
 
 /* ─── Slide de contagem regressiva (flip clock) ─── */
+/* mesma ideia do .pres-slide acima: teto relativo à tela em vez de fixo */
 .pres-countdown{
-  width:100%;max-width:1400px;
+  width:100%;max-width:min(2000px,94vw);
   flex-direction:column;align-items:center;justify-content:center;
   gap:6px;padding:30px 20px;text-align:center;
   animation:slideIn .55s cubic-bezier(.22,1,.36,1);
 }
 .fc-title{
-  font-size:clamp(34px,5vw,60px);font-weight:800;line-height:1.05;
+  font-size:clamp(34px,5vw,90px);font-weight:800;line-height:1.05;
   color:var(--gold-light);margin-top:4px;
   text-shadow:0 2px 30px rgba(212,169,125,.25);
 }
 .fc-date{
-  font-size:18px;color:var(--text-dim,#9a9090);margin-bottom:26px;
+  font-size:clamp(18px,1.3vw,26px);color:var(--text-dim,#9a9090);margin-bottom:26px;
   letter-spacing:.05em;
 }
 .fc-clock{
   display:flex;align-items:flex-start;justify-content:center;
-  gap:clamp(8px,1.6vw,22px);flex-wrap:nowrap;
+  gap:clamp(8px,1.6vw,32px);flex-wrap:nowrap;
 }
 .fc-group{display:flex;flex-direction:column;align-items:center;gap:12px;}
 .fc-cards{display:flex;gap:6px;}
 .fc-group-label{
-  font-size:13px;letter-spacing:.18em;text-transform:uppercase;
+  font-size:clamp(13px,1vw,18px);letter-spacing:.18em;text-transform:uppercase;
   color:var(--gold);opacity:.75;font-weight:600;
 }
 .fc-sep{
-  font-size:clamp(40px,6vw,72px);font-weight:700;color:var(--gold);
-  opacity:.45;line-height:clamp(96px,13vw,150px);
+  font-size:clamp(40px,6vw,108px);font-weight:700;color:var(--gold);
+  opacity:.45;line-height:clamp(96px,13vw,220px);
 }
 /* Cartão individual de um dígito */
 .fc-card{
   position:relative;
-  width:clamp(64px,8.5vw,104px);
-  height:clamp(96px,13vw,150px);
-  font-size:clamp(58px,8vw,104px);
+  width:clamp(64px,8.5vw,150px);
+  height:clamp(96px,13vw,220px);
+  font-size:clamp(58px,8vw,150px);
   font-weight:800;font-family:'Barlow',system-ui,sans-serif;
   perspective:500px;border-radius:12px;
   box-shadow:0 14px 34px rgba(0,0,0,.5);
@@ -620,7 +625,7 @@ tbody td{padding:14px 16px;font-size:13px;vertical-align:middle}
 .fc-flap-lower span{top:-100%;}
 /* LEFT PANEL - info */
 .pres-info{
-  padding:48px 52px;
+  padding:clamp(36px,3.6vw,68px) clamp(40px,4vw,76px);
   display:flex;flex-direction:column;justify-content:center;
   border-right:1px solid rgba(212,169,125,.1);
   background:linear-gradient(135deg,rgba(255,255,255,.025) 0%,transparent 100%);
@@ -629,7 +634,7 @@ tbody td{padding:14px 16px;font-size:13px;vertical-align:middle}
 .pres-proc-badge{
   display:inline-flex;align-items:center;gap:8px;
   padding:5px 14px;border-radius:4px;
-  font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+  font-size:clamp(11px,.9vw,15px);font-weight:700;letter-spacing:.12em;text-transform:uppercase;
   margin-bottom:22px;width:fit-content;
 }
 .pres-proc-badge::before{content:'';width:6px;height:6px;border-radius:50%;flex-shrink:0}
@@ -646,17 +651,17 @@ tbody td{padding:14px 16px;font-size:13px;vertical-align:middle}
 
 .pres-indicador{
   font-family:'Cormorant Garamond',serif;
-  font-size:clamp(22px,3.2vw,42px);
+  font-size:clamp(22px,3.2vw,60px);
   font-weight:700;color:#f0ece6;
   line-height:1.2;margin-bottom:12px;
 }
 .pres-indice{
-  font-size:clamp(12px,1.2vw,15px);
+  font-size:clamp(12px,1.2vw,20px);
   color:rgba(154,144,144,.7);margin-bottom:28px;
   font-style:italic;
 }
 .pres-resp{
-  font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+  font-size:clamp(12px,1vw,17px);font-weight:600;letter-spacing:.1em;text-transform:uppercase;
   color:rgba(154,144,144,.6);margin-bottom:32px;
 }
 
@@ -666,19 +671,19 @@ tbody td{padding:14px 16px;font-size:13px;vertical-align:middle}
 }
 .pres-big-val{
   font-family:'Cormorant Garamond',serif;
-  font-size:clamp(48px,7vw,96px);
+  font-size:clamp(48px,7vw,150px);
   font-weight:700;line-height:1;
   background:linear-gradient(135deg,#f0cea1,#d4a97d);
   -webkit-background-clip:text;-webkit-text-fill-color:transparent;
 }
 .pres-big-val.val-met{background:linear-gradient(135deg,#d4eaa0,#b8c97d);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
 .pres-big-val.val-unmet{background:linear-gradient(135deg,#e5a0a0,#c97d7d);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.pres-val-label{font-size:13px;color:rgba(154,144,144,.6);padding-bottom:12px;letter-spacing:.06em;text-transform:uppercase}
+.pres-val-label{font-size:clamp(13px,1vw,18px);color:rgba(154,144,144,.6);padding-bottom:12px;letter-spacing:.06em;text-transform:uppercase}
 
 .pres-status-badge{
   display:inline-flex;align-items:center;gap:8px;
   padding:8px 18px;border-radius:24px;
-  font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  font-size:clamp(13px,1.1vw,18px);font-weight:700;letter-spacing:.06em;text-transform:uppercase;
   margin-bottom:24px;width:fit-content;
 }
 .pres-status-badge .dot{width:7px;height:7px;border-radius:50%}
@@ -690,7 +695,7 @@ tbody td{padding:14px 16px;font-size:13px;vertical-align:middle}
 .psb-na .dot{background:rgba(154,144,144,.6)}
 
 .pres-meta-row{
-  font-size:13px;color:rgba(154,144,144,.7);
+  font-size:clamp(13px,1.1vw,18px);color:rgba(154,144,144,.7);
   display:flex;align-items:center;gap:10px;
 }
 .pres-meta-val{
@@ -700,16 +705,16 @@ tbody td{padding:14px 16px;font-size:13px;vertical-align:middle}
 
 /* RIGHT PANEL - chart */
 .pres-chart-panel{
-  padding:36px 40px;
+  padding:clamp(28px,3vw,52px) clamp(32px,3.5vw,58px);
   display:flex;flex-direction:column;justify-content:center;
   background:rgba(0,0,0,.15);
   min-height:0;
 }
 .pres-chart-title{
-  font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+  font-size:clamp(11px,.9vw,15px);font-weight:600;letter-spacing:.1em;text-transform:uppercase;
   color:rgba(154,144,144,.5);margin-bottom:16px;
 }
-.pres-chart-wrap{position:relative;flex:1;min-height:0;max-height:340px}
+.pres-chart-wrap{position:relative;flex:1;min-height:0;max-height:min(560px,44vh)}
 .pres-monthly-strip{
   display:grid;grid-template-columns:repeat(12,1fr);gap:4px;margin-top:16px;
 }
@@ -720,8 +725,8 @@ tbody td{padding:14px 16px;font-size:13px;vertical-align:middle}
 }
 .pres-month-cell.is-good{border-color:rgba(184,201,125,.25);background:rgba(184,201,125,.08)}
 .pres-month-cell.is-bad{border-color:rgba(201,125,125,.25);background:rgba(201,125,125,.08)}
-.pres-mc-label{font-size:9px;color:rgba(154,144,144,.5);text-transform:uppercase;margin-bottom:3px}
-.pres-mc-val{font-size:11px;font-weight:600;color:#f0ece6}
+.pres-mc-label{font-size:clamp(9px,.8vw,13px);color:rgba(154,144,144,.5);text-transform:uppercase;margin-bottom:3px}
+.pres-mc-val{font-size:clamp(11px,1vw,16px);font-weight:600;color:#f0ece6}
 .pres-mc-val.good{color:#b8c97d}.pres-mc-val.bad{color:#c97d7d}.pres-mc-val.na{color:rgba(90,85,85,.6)}
 
 /* ─── PROGRESS BAR ───────────────────────── */
@@ -860,24 +865,24 @@ input[type=range]::-webkit-slider-thumb{
   animation:slideIn .55s cubic-bezier(.22,1,.36,1);
 }
 .pol-numeral{
-  font-size:clamp(48px,7vw,96px);
+  font-size:clamp(48px,7vw,140px);
   font-family:'Cormorant Garamond',serif;
   font-weight:700;color:var(--gold);
   line-height:1;opacity:.9;
   text-shadow:0 0 40px rgba(212,169,125,.25);
 }
 .pol-rule{
-  width:clamp(40px,8vw,100px);height:2px;
+  width:clamp(40px,8vw,140px);height:2px;
   background:linear-gradient(90deg,transparent,var(--gold),transparent);
   flex-shrink:0;
 }
 .pol-text{
-  font-size:clamp(18px,2.8vw,40px);
+  font-size:clamp(18px,2.8vw,56px);
   font-family:'Cormorant Garamond',serif;
   font-weight:400;font-style:italic;
   color:var(--gold-bright);
   line-height:1.45;
-  max-width:860px;
+  max-width:min(1100px,80vw);
   letter-spacing:.01em;
 }
 .pol-footer{

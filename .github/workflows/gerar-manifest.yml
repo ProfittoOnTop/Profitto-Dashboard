@@ -13,6 +13,17 @@ on:
 permissions:
   contents: write
 
+# Duas renomeações/uploads em sequência rápida (poucos segundos de diferença)
+# disparam duas execuções desta Action quase juntas. Sem isso, ambas fazem
+# checkout do mesmo commit e a que tenta empurrar por último recebe um
+# "non-fast-forward" (rejeitada) — foi o que aconteceu em 2026-07-09 ao
+# renomear "1.jpg" pra "10.jpg" logo antes de renomear outra foto. Com
+# concurrency, a segunda execução espera a primeira terminar (e faz
+# checkout já com o commit dela aplicado), então nunca competem pelo push.
+concurrency:
+  group: gerar-manifest
+  cancel-in-progress: false
+
 jobs:
   gerar-manifest:
     runs-on: ubuntu-latest
@@ -43,5 +54,16 @@ jobs:
             echo "Nada mudou no manifest — nao ha o que commitar."
           else
             git commit -m "chore: atualizar fotos/manifest.json automaticamente"
-            git push
+            # Rede de seguranca extra alem do concurrency acima: se mesmo assim
+            # o push for rejeitado (ex.: alguem commitou outra coisa na main
+            # nesse meio-tempo), tenta de novo com rebase antes de desistir.
+            for i in 1 2 3 4 5; do
+              if git push; then
+                break
+              fi
+              echo "Push rejeitado (provavel commit concorrente na main) — tentativa $i, rebaseando e tentando de novo..."
+              git fetch origin main
+              git rebase origin/main
+              sleep 3
+            done
           fi
