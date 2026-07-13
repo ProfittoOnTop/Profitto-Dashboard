@@ -2431,7 +2431,7 @@ input[type=range]::-webkit-slider-thumb{
           <div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--border)">
             <div class="form-label" style="margin-bottom:10px">Contagem regressiva</div>
             <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--text);margin-bottom:12px">
-              <input type="checkbox" id="pres-show-countdown" checked onchange="presState.showCountdown=this.checked;schedulePresConfigSync()" style="accent-color:var(--gold);width:16px;height:16px">
+              <input type="checkbox" id="pres-show-countdown" checked onchange="presState.showCountdown=this.checked;saveAndSyncPresConfigNow()" style="accent-color:var(--gold);width:16px;height:16px">
               Exibir flip clock (contagem regressiva) na apresentação
             </label>
             <div class="form-grid" style="grid-template-columns:1.4fr 1fr 1fr">
@@ -4004,12 +4004,35 @@ async function syncPresConfigToGitHub() {
   if (ok) showToast('Configuração sincronizada com as outras TVs.', 'success');
 }
 
+// Salva e sincroniza NA HORA — para qualquer controle que dispara "onchange"
+// uma única vez por mudança real (título, data, hora, checkbox, slider ao
+// soltar, rádio, select). Usar debounce aqui seria perigoso: se a página for
+// recarregada antes do atraso terminar, o timer morre com a aba e o commit
+// nunca acontece — ao recarregar, loadPresConfigFromRepo() busca a versão
+// AINDA ANTIGA do arquivo no repositório e "desfaz" a mudança que parecia
+// salva (bug real encontrado em 2026-07-13: usuário mudou o título, recarregou
+// rápido, e o título voltou ao anterior).
+async function saveAndSyncPresConfigNow() {
+  savePresConfig();
+  clearTimeout(presConfigSyncTimer);
+  await syncPresConfigToGitHub();
+}
+
+// Só para o caso de MUITOS eventos em sequência rápida (marcar vários
+// indicadores na lista de seleção manual, um clique de cada vez) — aqui sim
+// vale a pena esperar um pouco e coalescer em um commit só. Ver flush no
+// 'pagehide' abaixo: melhor esforço para não perder a última seleção se a
+// página fechar antes do atraso terminar (sem garantia, já que são duas
+// chamadas de rede em sequência — mas reduz a janela de risco).
 let presConfigSyncTimer = null;
 function schedulePresConfigSync() {
   savePresConfig(); // localStorage deste navegador, sempre e imediato
   clearTimeout(presConfigSyncTimer);
   presConfigSyncTimer = setTimeout(syncPresConfigToGitHub, 1500);
 }
+window.addEventListener('pagehide', () => {
+  if (presConfigSyncTimer) { clearTimeout(presConfigSyncTimer); syncPresConfigToGitHub(); }
+});
 
 // Aplica dados/admin-overrides.json por cima do DATA já carregado — criações,
 // edições e exclusões feitas pelo Admin em QUALQUER navegador. Roda ANTES de
@@ -5233,8 +5256,10 @@ function toTimeInputValue(d) {
   return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
 }
 
-// Chamado pelos inputs de data/hora/título da contagem regressiva (item 1)
-function updateCountdownConfig() {
+// Chamado pelos inputs de data/hora/título da contagem regressiva (item 1) —
+// onchange dispara uma vez só, então sincroniza NA HORA (ver comentário em
+// saveAndSyncPresConfigNow sobre por que debounce aqui seria arriscado).
+async function updateCountdownConfig() {
   const cdDate = document.getElementById('pres-countdown-date');
   const cdTime = document.getElementById('pres-countdown-time');
   const cdTitle = document.getElementById('pres-countdown-title');
@@ -5242,37 +5267,37 @@ function updateCountdownConfig() {
   const timeVal = cdTime && cdTime.value ? cdTime.value : '08:00';
   presState.countdownDate = dateVal ? (dateVal + 'T' + timeVal + ':00') : null;
   presState.countdownTitle = cdTitle && cdTitle.value.trim() ? cdTitle.value.trim() : null;
-  schedulePresConfigSync();
+  await saveAndSyncPresConfigNow();
 }
 
 // Chamado pelo liga/desliga e intervalo da galeria de fotos (item 2)
-function updatePhotoConfig() {
+async function updatePhotoConfig() {
   const showPh = document.getElementById('pres-show-photos');
   const phInt = document.getElementById('pres-photo-interval');
   presState.showPhotos = showPh ? showPh.checked : true;
   presState.photoInterval = phInt ? (parseInt(phInt.value) || 6) : 6;
-  schedulePresConfigSync();
+  await saveAndSyncPresConfigNow();
 }
 
 // Chamados pelos controles de duração/ordem/quais indicadores/filtro de
 // processo — únicos pontos onde essas configurações são salvas fora do fluxo
 // de clicar "▶ Iniciar" (que roda também automaticamente no boot da página,
 // então NUNCA deve disparar sincronização sozinho).
-function onPresDurationChange(el) {
+async function onPresDurationChange(el) {
   presState.duration = parseInt(el.value) || presState.duration;
-  schedulePresConfigSync();
+  await saveAndSyncPresConfigNow();
 }
-function onPresOrderChange(el) {
+async function onPresOrderChange(el) {
   presState.order = el.value;
-  schedulePresConfigSync();
+  await saveAndSyncPresConfigNow();
 }
-function onPresWhichChange(el) {
+async function onPresWhichChange(el) {
   presState.which = el.value;
-  schedulePresConfigSync();
+  await saveAndSyncPresConfigNow();
 }
-function onPresProcFilterChange(el) {
+async function onPresProcFilterChange(el) {
   presState.procFilter = el.value;
-  schedulePresConfigSync();
+  await saveAndSyncPresConfigNow();
 }
 
 function renderPresIndList() {
@@ -5335,15 +5360,15 @@ function togglePresIndList() {
   }
 }
 
-function presSelectAll() {
+async function presSelectAll() {
   DATA.forEach(d => presState.selectedIds.add(d.id));
   renderPresIndList();
-  schedulePresConfigSync();
+  await saveAndSyncPresConfigNow();
 }
-function presSelectNone() {
+async function presSelectNone() {
   presState.selectedIds.clear();
   renderPresIndList();
-  schedulePresConfigSync();
+  await saveAndSyncPresConfigNow();
 }
 
 // ─── Build queue ───────────────────────────
