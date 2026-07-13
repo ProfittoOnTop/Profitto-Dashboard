@@ -1,6 +1,6 @@
 # Atualização automática dos indicadores (dados/indicadores.csv)
 
-Todo mês basta subir aqui
+Todo mês, em vez de pedir pro Claude editar o código à mão, basta subir aqui
 a planilha atualizada — uma GitHub Action lê o arquivo, casa cada linha com
 os indicadores do dashboard, e aplica os meses novos sozinha.
 
@@ -31,10 +31,12 @@ sozinhas (ficam de fora, sem risco de entrar errado):
   digitado diferente do que está cadastrado, ou indicador realmente novo
   (nesse caso, precisa ser criado manualmente pela tela de Administração,
   ou peça pro Claude cadastrar).
-- **Células com formato não reconhecido** — hoje isso acontece só com o
-  indicador "Relatório mensal ao CEO" de PEDRO/Comercial, que usa datas em
-  vez de números — precisa ser preenchido manualmente pela tela de
-  Administração (ou peça pro Claude aplicar).
+- **Células com formato não reconhecido** — quando uma célula tem algo que
+  não é número/percentual/hora reconhecível (ex.: uma data, ou texto solto),
+  a Action não arrisca aplicar "no palpite" e deixa de fora, sinalizando aqui
+  para preenchimento manual pela tela de Administração (ou peça pro Claude
+  aplicar). Obs.: os indicadores "Relatório mensal ao CEO" (que usavam datas)
+  foram descontinuados e removidos do dashboard em 2026-07-13.
 
 ## O que a Action NUNCA faz sozinha
 

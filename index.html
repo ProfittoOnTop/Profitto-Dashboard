@@ -580,6 +580,11 @@ tbody td{padding:14px 16px;font-size:13px;vertical-align:middle}
   font-size:clamp(18px,1.3vw,26px);color:var(--text-dim,#9a9090);margin-bottom:26px;
   letter-spacing:.05em;
 }
+/* Mensagem exibida quando a data configurada já passou (em vez do relógio zerado) */
+.fc-ended{
+  font-size:clamp(40px,7vw,120px);font-weight:800;line-height:1.1;margin-top:24px;
+  color:var(--gold);text-shadow:0 2px 40px rgba(212,169,125,.35);
+}
 .fc-clock{
   display:flex;align-items:flex-start;justify-content:center;
   gap:clamp(8px,1.6vw,32px);flex-wrap:nowrap;
@@ -950,7 +955,7 @@ input[type=range]::-webkit-slider-thumb{
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
       Gestão à Vista
     </button>
-    <button class="save-btn" onclick="saveToFile()" id="save-btn" title="Salvar alterações no arquivo HTML">
+    <button class="save-btn" onclick="saveToFile()" id="save-btn" title="Baixar uma cópia deste dashboard com os dados atuais embutidos, para republicar como index.html no GitHub">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
       Salvar arquivo
       <div class="save-pulse" id="save-pulse"></div>
@@ -2599,7 +2604,7 @@ input[type=range]::-webkit-slider-thumb{
 // CONSTANTS
 // ============================================================
 const MONTHS = ['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
-const STORAGE_KEY = 'profitto_indicadores_v4'; // v4 = correção de escala do Academia CEO + ocultação de EBITDA/Seminários
+const STORAGE_KEY = 'profitto_indicadores_v5'; // v5 = remoção dos 3 "Relatório mensal ao CEO" (descontinuados). v4 = correção de escala do Academia CEO + ocultação de EBITDA/Seminários
 
 // ============================================================
 // DEFAULT DATA
@@ -2742,24 +2747,6 @@ const DEFAULT_DATA = [
     "targetVal": 1,
     "targetDir": "gte",
     "unit": ""
-  },
-  {
-    "id": 62,
-    "processo": "COMERCIAL",
-    "resp": "PEDRO",
-    "indicador": "Relatório mensal ao CEO",
-    "indice": "-",
-    "meta": "Até o 5º dia útil",
-    "values": {
-      "JAN": "ok",
-      "FEV": "ok",
-      "MAR": "ok",
-      "ABR": "ok"
-    },
-    "targetVal": 5,
-    "targetDir": "lte",
-    "unit": "d",
-    "presHiddenManual": true
   },
   {
     "id": 65,
@@ -2929,24 +2916,6 @@ const DEFAULT_DATA = [
     "targetVal": 1,
     "targetDir": "gte",
     "unit": ""
-  },
-  {
-    "id": 69,
-    "processo": "JURIDICO",
-    "resp": "DANIEL",
-    "indicador": "Relatório mensal ao CEO",
-    "indice": "-",
-    "meta": "Até o 5º dia útil",
-    "values": {
-      "JAN": "ok",
-      "FEV": "ok",
-      "MAR": "ok",
-      "ABR": "ok"
-    },
-    "targetVal": 5,
-    "targetDir": "lte",
-    "unit": "d",
-    "presHiddenManual": true
   },
   {
     "id": 18,
@@ -3763,24 +3732,6 @@ const DEFAULT_DATA = [
     "targetVal": 1,
     "targetDir": "gte",
     "unit": ""
-  },
-  {
-    "id": 98,
-    "processo": "TECNICO",
-    "resp": "VAGNER",
-    "indicador": "Relatório mensal ao CEO",
-    "indice": "-",
-    "meta": "Até o 5º dia útil",
-    "values": {
-      "JAN": "ok",
-      "FEV": "ok",
-      "MAR": "ok",
-      "ABR": "nok"
-    },
-    "targetVal": 5,
-    "targetDir": "lte",
-    "unit": "d",
-    "presHiddenManual": true
   }
 ];
 
@@ -4351,8 +4302,13 @@ function saveEntryValues() {
   if (!row) return;
   MONTHS.forEach(m=>{
     const inp = document.getElementById('me-'+m);
-    if (inp && inp.value!=='') row.values[m] = parseFloat(inp.value);
-    else if (inp && inp.value==='') delete row.values[m];
+    if (!inp) return;
+    if (inp.value!=='') { row.values[m] = parseFloat(inp.value); return; }
+    // Campo vazio = apagar o mês — MAS só se o valor atual for numérico (ou já
+    // inexistente). Um valor não-numérico (ex.: "ok"/"nok") não consegue sequer
+    // aparecer neste <input type=number>, então "campo vazio" aqui NÃO significa
+    // que o usuário limpou o dado — apagá-lo destruiria o histórico sem querer.
+    if (typeof row.values[m] === 'number') delete row.values[m];
   });
   // Item 4: se este indicador não tem override manual, lançar o primeiro dado
   // pode tirá-lo do Grupo 1 (sem dados) automaticamente — recalcula todos por
@@ -5520,25 +5476,31 @@ function cardHTML(id) {
   </div>`;
 }
 
-function groupHTML(prefix, label) {
+// digits = quantos cartões o grupo tem. Horas/minutos/segundos usam 2 (0–59);
+// "Dias" usa 3 para não travar em 99 — uma contagem regressiva de mais de 99
+// dias mostrava "99" congelado, errado e sem aviso (bug encontrado 2026-07-13).
+function groupHTML(prefix, label, digits=2) {
+  let cards = '';
+  for (let i = 0; i < digits; i++) cards += cardHTML(prefix + '-' + i);
   return `<div class="fc-group">
-    <div class="fc-cards">${cardHTML(prefix+'-t')}${cardHTML(prefix+'-u')}</div>
+    <div class="fc-cards">${cards}</div>
     <div class="fc-group-label">${label}</div>
   </div>`;
 }
 
-function updateGroup(prefix, value) {
-  const v = Math.min(99, Math.max(0, value));
-  const s = String(v).padStart(2, '0');
-  const t = document.getElementById(prefix + '-t');
-  const u = document.getElementById(prefix + '-u');
-  if (t) flipDigit(t, s[0]);
-  if (u) flipDigit(u, s[1]);
+function updateGroup(prefix, value, digits=2) {
+  const max = Math.pow(10, digits) - 1;      // 2 díg → 99, 3 díg → 999 (~2,7 anos)
+  const v = Math.min(max, Math.max(0, value));
+  const s = String(v).padStart(digits, '0');
+  for (let i = 0; i < digits; i++) {
+    const card = document.getElementById(prefix + '-' + i);
+    if (card) flipDigit(card, s[i]);
+  }
 }
 
 function tickCountdown() {
   const p = getCountdownParts();
-  updateGroup('fc-d', p.days);
+  updateGroup('fc-d', p.days, 3);
   updateGroup('fc-h', p.hours);
   updateGroup('fc-m', p.mins);
   updateGroup('fc-s', p.secs);
@@ -5554,6 +5516,24 @@ function renderCountdownSlide() {
   if (phEl) phEl.style.display = 'none';
   if (cdEl) cdEl.style.display = 'flex';
 
+  // Se a data configurada já passou, não adianta ficar mostrando 00:00:00:00
+  // congelado (na TV parece que travou) — mostra uma mensagem clara até alguém
+  // reconfigurar a próxima data no painel de Admin.
+  if (getCountdownParts().ended) {
+    clearCountdown();
+    if (cdEl) {
+      cdEl.innerHTML = `
+        <div class="fc-title">${getConfiguredAuditTitle()}</div>
+        <div class="fc-ended">🎉 Chegou o dia!</div>`;
+    }
+    const counterE = document.getElementById('pres-counter');
+    if (counterE) counterE.textContent = (presState.currentIdx + 1) + ' / ' + presState.queue.length;
+    const barE = document.getElementById('pres-bar');
+    if (barE) barE.style.width = '0%';
+    if (!presState.paused) startPresTimer();
+    return;
+  }
+
   // Item 1: data e título vêm da configuração do usuário (getConfiguredAuditDate/Title),
   // com fallback para os defaults de fábrica. Reconstrói o cabeçalho (título/data) a
   // cada chamada — só o esqueleto do flip clock (cartões) é montado uma única vez,
@@ -5563,12 +5543,12 @@ function renderCountdownSlide() {
     const title = getConfiguredAuditTitle();
     const dataFmt = String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear();
 
-    if (!document.getElementById('fc-d-t')) {
+    if (!document.getElementById('fc-d-0')) {
       cdEl.innerHTML = `
         <div class="fc-title" id="fc-title">${title}</div>
         <div class="fc-date" id="fc-date">${dataFmt}</div>
         <div class="fc-clock">
-          ${groupHTML('fc-d','Dias')}
+          ${groupHTML('fc-d','Dias',3)}
           <div class="fc-sep">:</div>
           ${groupHTML('fc-h','Horas')}
           <div class="fc-sep">:</div>
@@ -5755,7 +5735,7 @@ function saveToFile() {
 
     saveData();
 
-    showToast(`✓ "${filename}" salvo com ${DATA.length} indicadores. Substitua o arquivo na pasta da rede.`, 'success');
+    showToast(`✓ "${filename}" baixado (${DATA.length} indicadores embutidos). Para valer em TODAS as TVs, suba-o como index.html no GitHub — edições feitas só aqui no Admin ficam neste navegador até lá.`, 'success');
     pulse.classList.add('show');
     setTimeout(() => pulse.classList.remove('show'), 3000);
 

@@ -20,8 +20,13 @@ permissions:
 # renomear "1.jpg" pra "10.jpg" logo antes de renomear outra foto. Com
 # concurrency, a segunda execução espera a primeira terminar (e faz
 # checkout já com o commit dela aplicado), então nunca competem pelo push.
+#
+# O grupo "commit-main" é COMPARTILHADO com a Action "Atualizar indicadores":
+# as duas comitam sozinhas na main, então um mesmo push que mexa em fotos/ e
+# dados/indicadores.csv ao mesmo tempo dispararia as duas juntas. Mesmo grupo =
+# elas rodam em fila (nunca competem pelo push), não só cada uma consigo mesma.
 concurrency:
-  group: gerar-manifest
+  group: commit-main
   cancel-in-progress: false
 
 jobs:

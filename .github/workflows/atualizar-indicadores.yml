@@ -7,6 +7,18 @@ on:
   workflow_dispatch: {}
 permissions:
   contents: write
+
+# Esta Action também comita sozinha na main (dados/indicadores-valores.json).
+# Se rodar ao mesmo tempo que outra que empurra pra main (ex.: a "Gerar manifest
+# de fotos", caso um mesmo push mexa em dados/ e fotos/), a que empurrar por
+# último leva "non-fast-forward" e falha. Como esta roda só ~1x por mês, uma
+# falha silenciosa deixaria os dados desatualizados até o próximo upload — então
+# vale a mesma proteção do gerar-manifest.yml: serializar execuções e, se ainda
+# assim o push for rejeitado, tentar de novo com rebase.
+concurrency:
+  group: commit-main
+  cancel-in-progress: false
+
 jobs:
   atualizar:
     runs-on: ubuntu-latest
@@ -24,5 +36,16 @@ jobs:
             echo "Nada novo pra aplicar."
           else
             git commit -m "chore: atualizar indicadores-valores.json automaticamente"
-            git push
+            # Rede de seguranca alem do concurrency: se o push for rejeitado
+            # (algum commit concorrente na main nesse meio-tempo), tenta de novo
+            # com rebase antes de desistir.
+            for i in 1 2 3 4 5; do
+              if git push; then
+                break
+              fi
+              echo "Push rejeitado (provavel commit concorrente na main) — tentativa $i, rebaseando e tentando de novo..."
+              git fetch origin main
+              git rebase origin/main
+              sleep 3
+            done
           fi
