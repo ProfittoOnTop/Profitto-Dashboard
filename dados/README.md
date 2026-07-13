@@ -57,6 +57,31 @@ numa TV ligada o dia todo. O dashboard só busca
 `dados/indicadores-valores.json` — um arquivo estático, na mesma origem do
 site, sem limite de requisições e sem precisar de token nenhum.
 
+## `dados/admin-overrides.json` — sincronização das edições do Admin (2026-07-13)
+
+Arquivo diferente do `indicadores-valores.json` acima (esse é sobre a
+planilha mensal). Este guarda o estado completo de qualquer indicador
+criado, editado ou excluído pela tela de **Administração**, em qualquer
+computador/TV — para que essas ações passem a valer em todos os telões
+automaticamente, sem precisar exportar/importar backup na mão.
+
+- **Leitura:** igual aos outros arquivos desta pasta — fetch estático, sem
+  token, sem limite de requisições.
+- **Escrita:** aqui SIM precisa de autenticação, porque é o navegador quem
+  grava direto no repositório via API do GitHub. Configure em
+  **Administração → 🔄 Sincronização entre TVs**, colando um token
+  "fine-grained" (github.com → Settings → Developer settings → Fine-grained
+  tokens) restrito a **este repositório**, só com permissão **Contents: Read
+  and write**. O token fica salvo apenas no `localStorage` daquele
+  navegador — nunca é commitado nem exposto em nenhum outro lugar.
+- Sem token configurado, o Admin continua funcionando exatamente como antes
+  (mudança fica só naquele navegador) — a sincronização é 100% opcional.
+- Cada entrada em `rows` é a foto inteira daquele indicador (ou
+  `{"deleted": true}` para exclusões) — não um diff de campo. Criar, editar
+  metadados e lançar valores mensais usam o mesmo mecanismo: gravar a versão
+  atual da linha inteira. Se duas pessoas editarem o MESMO indicador quase ao
+  mesmo tempo em navegadores diferentes, a última a salvar vence.
+
 ## Por que não tem revisão (Pull Request) antes de aplicar
 
 Por decisão do usuário: como a mesma matriz é sempre reaproveitada mês a mês

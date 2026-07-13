@@ -2315,13 +2315,46 @@ input[type=range]::-webkit-slider-thumb{
           </div>
           <div style="margin-top:14px;padding:12px 14px;background:var(--gold-dim);border:1px solid rgba(212,169,125,.15);border-radius:6px;font-size:12px;color:var(--text-muted);display:flex;align-items:flex-start;gap:10px">
             <span>⚠️</span>
-            <span>Dados salvos <strong style="color:var(--text)">neste navegador</strong>. Exporte o backup regularmente para não perder informações.</span>
+            <span>Dados salvos <strong style="color:var(--text)">neste navegador</strong> (e, se o token do GitHub abaixo estiver configurado, sincronizados automaticamente com as outras TVs). Exporte o backup regularmente para não perder informações.</span>
           </div>
           <div style="display:flex;gap:8px;margin-top:12px">
             <button class="btn btn-ghost btn-sm" style="flex:1;justify-content:center" onclick="exportBackup()">🗃️ Backup JSON</button>
             <button class="btn btn-ghost btn-sm" style="flex:1;justify-content:center" onclick="document.getElementById('import-file').click()">📥 Restaurar</button>
           </div>
           <input type="file" id="import-file" accept=".json" style="display:none" onchange="importBackup(this)">
+        </div>
+      </div>
+
+      <!-- ─── SINCRONIZAÇÃO ENTRE TVS (GitHub) ─── -->
+      <div class="admin-card">
+        <div class="admin-card-header">
+          <div class="admin-card-title">🔄 Sincronização entre TVs</div>
+        </div>
+        <div class="admin-card-body">
+          <p style="font-size:13px;color:var(--text-muted);margin-bottom:10px">
+            Com um token do GitHub configurado, criar/editar/excluir indicadores e lançar
+            dados mensais aqui passa a valer em <strong style="color:var(--text)">todas as TVs</strong>
+            automaticamente (na próxima vez que cada uma carregar a página) — sem precisar
+            baixar/subir arquivo manualmente.
+          </p>
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+            <div style="position:relative;flex:1">
+              <input type="password" id="gh-token-input" class="form-input" placeholder="github_pat_..." style="padding-right:38px;font-family:monospace">
+              <button type="button" onclick="toggleGhTokenEye()" id="gh-token-eye-btn" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:14px;padding:4px" title="Mostrar/ocultar">👁</button>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="saveGhTokenFromInput()">Salvar</button>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-ghost btn-sm" onclick="testGhConnection()">🔌 Testar conexão</button>
+            <button class="btn btn-ghost btn-sm" onclick="clearGhToken()">🗑️ Remover token</button>
+          </div>
+          <div id="gh-sync-status" style="margin-top:10px;font-size:12px;color:var(--text-dim)"></div>
+          <div style="margin-top:12px;padding:12px 14px;background:var(--gold-dim);border:1px solid rgba(212,169,125,.15);border-radius:6px;font-size:12px;color:var(--text-muted)">
+            Crie em <strong style="color:var(--text)">github.com → Settings → Developer settings →
+            Fine-grained tokens</strong>, restrito ao repositório <strong style="color:var(--text)">ProfittoOnTop/Profitto-Dashboard</strong>,
+            só com a permissão <strong style="color:var(--text)">Contents: Read and write</strong>. O
+            token fica salvo só neste navegador (nunca é enviado a nada além da API do GitHub).
+          </div>
         </div>
       </div>
 
@@ -3808,6 +3841,173 @@ async function loadIndicadoresValoresFromRepo() {
   } catch (e) { /* mantém os dados já carregados — TV continua funcionando normalmente */ }
 }
 
+// ============================================================
+// SINCRONIZAÇÃO ENTRE TVS VIA GITHUB (dados/admin-overrides.json)
+// ============================================================
+// Diferente do dados/indicadores-valores.json (que só PREENCHE meses em
+// branco, gerado por uma Action a partir da planilha mensal), este arquivo
+// guarda o estado COMPLETO de qualquer indicador criado/editado/excluído pelo
+// Admin em qualquer navegador — { rows: { [id]: <indicador completo> | {deleted:true} }, nextId }.
+// Cada linha aqui é uma foto inteira daquele indicador (não um diff de campo),
+// então "criar", "editar" e "lançar valores mensais" usam o mesmo mecanismo:
+// escrever a versão atual da linha inteira. Lida por qualquer TV via fetch
+// estático (mesma origem, sem token); ESCRITA precisa de um token do GitHub
+// com permissão de escrita neste repositório, colado uma vez no Admin e
+// guardado só no localStorage deste navegador (nunca no código-fonte).
+const GH_OWNER = 'ProfittoOnTop';
+const GH_REPO = 'Profitto-Dashboard';
+const GH_BRANCH = 'main';
+const GH_OVERRIDES_PATH = 'dados/admin-overrides.json';
+const GH_TOKEN_KEY = 'profitto_gh_token';
+
+function getGhToken() {
+  return (localStorage.getItem(GH_TOKEN_KEY) || '').trim();
+}
+function setGhSyncStatus(msg, cls) {
+  const el = document.getElementById('gh-sync-status');
+  if (el) { el.textContent = msg; el.style.color = cls==='error' ? 'var(--danger)' : cls==='ok' ? 'var(--accent)' : 'var(--text-dim)'; }
+}
+function saveGhTokenFromInput() {
+  const inp = document.getElementById('gh-token-input');
+  const val = inp ? inp.value.trim() : '';
+  if (!val) { showToast('Cole um token antes de salvar.', 'error'); return; }
+  localStorage.setItem(GH_TOKEN_KEY, val);
+  showToast('Token salvo neste navegador.', 'success');
+  setGhSyncStatus('Token salvo. Clique em "Testar conexão" para confirmar.', 'info');
+}
+function clearGhToken() {
+  localStorage.removeItem(GH_TOKEN_KEY);
+  const inp = document.getElementById('gh-token-input');
+  if (inp) inp.value = '';
+  setGhSyncStatus('Token removido — edições feitas aqui voltam a ficar só neste navegador.', 'info');
+  showToast('Token removido.', 'info');
+}
+function toggleGhTokenEye() {
+  const inp = document.getElementById('gh-token-input');
+  const btn = document.getElementById('gh-token-eye-btn');
+  if (!inp || !btn) return;
+  if (inp.type === 'password') { inp.type = 'text'; btn.textContent = '🙈'; }
+  else { inp.type = 'password'; btn.textContent = '👁'; }
+}
+async function testGhConnection() {
+  const token = getGhToken();
+  if (!token) { setGhSyncStatus('Nenhum token configurado.', 'error'); return; }
+  setGhSyncStatus('Testando...', 'info');
+  try {
+    const res = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}`, {
+      headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json' }
+    });
+    if (res.status === 401 || res.status === 403) { setGhSyncStatus('Token inválido ou sem permissão neste repositório.', 'error'); return; }
+    if (!res.ok) { setGhSyncStatus(`Falha ao conectar (${res.status}).`, 'error'); return; }
+    setGhSyncStatus('✓ Conectado — sincronização automática ativa.', 'ok');
+  } catch (e) {
+    setGhSyncStatus('Falha de rede ao testar conexão: ' + e.message, 'error');
+  }
+}
+
+// UTF-8-safe base64 (a API do GitHub exige o conteúdo do arquivo em base64;
+// btoa/atob puros quebram com acentos — indicador, resp etc. têm ç/ã/á/etc.)
+function utf8ToB64(str) {
+  const bytes = new TextEncoder().encode(str);
+  let bin = '';
+  bytes.forEach(b => { bin += String.fromCharCode(b); });
+  return btoa(bin);
+}
+function b64ToUtf8(b64) {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new TextDecoder().decode(bytes);
+}
+
+async function ghApiRequest(path, opts = {}) {
+  const token = getGhToken();
+  return fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/${path}`, {
+    ...opts,
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Accept': 'application/vnd.github+json',
+      ...(opts.headers || {}),
+    },
+  });
+}
+async function ghGetOverridesFile() {
+  const res = await ghApiRequest(`contents/${GH_OVERRIDES_PATH}?ref=${GH_BRANCH}`);
+  if (res.status === 404) return { sha: null, json: { rows: {}, nextId: null } };
+  if (!res.ok) throw new Error(`GET falhou (${res.status})`);
+  const body = await res.json();
+  return { sha: body.sha, json: JSON.parse(b64ToUtf8(body.content)) };
+}
+async function ghPutOverridesFile(json, sha, message) {
+  return ghApiRequest(`contents/${GH_OVERRIDES_PATH}`, {
+    method: 'PUT',
+    body: JSON.stringify({ message, content: utf8ToB64(JSON.stringify(json, null, 2)), sha: sha || undefined, branch: GH_BRANCH }),
+  });
+}
+
+// Grava a versão ATUAL da linha `id` (indicador completo, ou {deleted:true})
+// no arquivo compartilhado. Lê-modifica-grava com retry: se outra TV/navegador
+// comitou entre nossa leitura e escrita, a API responde 409 (sha desatualizado)
+// — nesse caso, relê e tenta de novo, até 5x. Nunca lança erro pra quem chamou:
+// se falhar, avisa por toast e a mudança fica só neste navegador (igual ao
+// comportamento de antes desta funcionalidade existir).
+async function syncRowToGitHub(id, rowOrTombstone) {
+  const token = getGhToken();
+  if (!token) return; // sem token configurado: silencioso, comportamento local de sempre
+  for (let attempt = 1; attempt <= 5; attempt++) {
+    try {
+      const { sha, json } = await ghGetOverridesFile();
+      json.rows = json.rows || {};
+      json.rows[id] = rowOrTombstone;
+      if (typeof nextId === 'number') json.nextId = Math.max(json.nextId || 0, nextId);
+      const msg = rowOrTombstone && rowOrTombstone.deleted
+        ? `chore: excluir indicador ${id} via Admin`
+        : `chore: atualizar indicador ${id} via Admin`;
+      const res = await ghPutOverridesFile(json, sha, msg);
+      if (res.status === 409) continue; // conflito de sha — relê e tenta de novo
+      if (res.status === 401 || res.status === 403) { showToast('Token do GitHub inválido/sem permissão — mudança ficou só neste navegador.', 'error'); return; }
+      if (!res.ok) { const t = await res.text(); throw new Error(`${res.status}: ${t.slice(0,200)}`); }
+      showToast('Sincronizado com as outras TVs.', 'success');
+      return;
+    } catch (e) {
+      if (attempt === 5) { showToast('Falha ao sincronizar com o GitHub (' + e.message + ') — mudança ficou só neste navegador.', 'error'); return; }
+    }
+  }
+  showToast('Não foi possível sincronizar (conflito persistente) — tente salvar de novo.', 'error');
+}
+
+// Aplica dados/admin-overrides.json por cima do DATA já carregado — criações,
+// edições e exclusões feitas pelo Admin em QUALQUER navegador. Roda ANTES de
+// loadIndicadoresValoresFromRepo() no boot, para que o preenchimento mensal
+// (que só preenche o que ainda está em branco) enxergue o estado mais atual
+// de cada indicador, e não fique "brigando" com uma edição manual recente.
+async function loadAdminOverridesFromRepo() {
+  try {
+    const res = await fetch('./dados/admin-overrides.json', { cache: 'no-store' });
+    if (!res.ok) return;
+    const patch = await res.json();
+    if (!patch || typeof patch !== 'object' || !patch.rows) return;
+
+    let changed = false;
+    Object.entries(patch.rows).forEach(([idStr, val]) => {
+      const id = parseInt(idStr);
+      const idx = DATA.findIndex(d => d.id === id);
+      if (val && val.deleted) {
+        if (idx !== -1) { DATA.splice(idx, 1); changed = true; }
+      } else if (val && typeof val === 'object') {
+        if (idx !== -1) DATA[idx] = val; else DATA.push(val);
+        changed = true;
+      }
+    });
+    if (typeof patch.nextId === 'number' && patch.nextId > nextId) nextId = patch.nextId;
+
+    if (changed) {
+      recomputeAutoHidden();
+      saveData();
+    }
+  } catch (e) { /* mantém os dados já carregados — TV continua funcionando normalmente */ }
+}
+
 // ─── Item 4: ocultar por padrão, na Gestão à Vista, indicadores qualitativos ───
 // ─── ou sem nenhum dado lançado                                            ───
 //
@@ -4104,6 +4304,11 @@ function renderAdmin() {
   renderIndList();
   populateEntrySelect();
   if (typeof renderPresConfig === 'function') renderPresConfig();
+  const tokenInp = document.getElementById('gh-token-input');
+  if (tokenInp) {
+    tokenInp.value = getGhToken();
+    setGhSyncStatus(getGhToken() ? 'Token configurado. Clique em "Testar conexão" para confirmar.' : 'Nenhum token configurado — edições ficam só neste navegador.', 'info');
+  }
 }
 function renderIndList() {
   document.getElementById('ind-count').textContent = DATA.length+' itens';
@@ -4215,7 +4420,18 @@ function editIndicador(id) {
   if (autoHint) autoHint.style.display = (row.presHidden && !isManual) ? 'block' : 'none';
   showToast('Indicador carregado para edição.','info');
 }
-function saveIndicador() {
+// IDs de indicadores NOVOS usam timestamp (ms), não um contador sequencial
+// simples — agora que edições sincronizam entre navegadores (syncRowToGitHub),
+// dois Admins criando um indicador quase ao mesmo tempo em TVs/computadores
+// diferentes, sem saber um do outro ainda, poderiam gerar o MESMO próximo id
+// sequencial. Timestamp em milissegundos torna essa colisão praticamente
+// impossível sem precisar de nenhuma coordenação central.
+function genNewId() {
+  const id = Math.max(nextId, Date.now());
+  nextId = id + 1;
+  return id;
+}
+async function saveIndicador() {
   const proc = document.getElementById('f-processo').value;
   const resp = document.getElementById('f-resp').value.trim().toUpperCase();
   const indicador = document.getElementById('f-indicador').value.trim();
@@ -4231,14 +4447,17 @@ function saveIndicador() {
   // a regra automática de qualitativos/sem dados nunca sobrescreva o que o
   // usuário escolheu conscientemente aqui.
   const presHiddenManual = document.getElementById('f-preshidden').checked;
+  let savedRow;
   if (editId) {
     const idx = DATA.findIndex(r=>r.id===editId);
     if (idx!==-1) {
       DATA[idx] = {...DATA[idx], processo:proc, resp, indicador, indice, meta, targetVal:tgtVal, targetDir:tgtDir||null, unit, presHiddenManual};
+      savedRow = DATA[idx];
       showToast('Indicador atualizado com sucesso!','success');
     }
   } else {
-    DATA.push({id:nextId++, processo:proc, resp, indicador, indice, meta, values:{}, targetVal:tgtVal, targetDir:tgtDir||null, unit, presHiddenManual});
+    savedRow = {id:genNewId(), processo:proc, resp, indicador, indice, meta, values:{}, targetVal:tgtVal, targetDir:tgtDir||null, unit, presHiddenManual};
+    DATA.push(savedRow);
     showToast('Novo indicador criado!','success');
   }
   recomputeAutoHidden();
@@ -4246,6 +4465,7 @@ function saveIndicador() {
   clearForm();
   renderAdmin();
   renderDashboard();
+  if (savedRow) await syncRowToGitHub(savedRow.id, savedRow);
 }
 function selectIndItem(id) {
   editIndicador(id);
@@ -4262,13 +4482,14 @@ function confirmDelete(id) {
   document.getElementById('confirm-ok').onclick = ()=>{ deleteIndicador(id); document.getElementById('confirm-overlay').classList.remove('open'); };
   document.getElementById('confirm-overlay').classList.add('open');
 }
-function deleteIndicador(id) {
+async function deleteIndicador(id) {
   DATA = DATA.filter(r=>r.id!==id);
   saveData();
   clearForm();
   renderAdmin();
   renderDashboard();
   showToast('Indicador excluído.','info');
+  await syncRowToGitHub(id, {deleted:true});
 }
 
 // ============================================================
@@ -4296,7 +4517,7 @@ function loadEntryValues() {
     </div>`;
   }).join('');
 }
-function saveEntryValues() {
+async function saveEntryValues() {
   const id = parseInt(document.getElementById('entry-select').value);
   const row = DATA.find(r=>r.id===id);
   if (!row) return;
@@ -4317,6 +4538,7 @@ function saveEntryValues() {
   saveData();
   renderDashboard();
   showToast('Dados mensais salvos com sucesso!','success');
+  await syncRowToGitHub(id, row);
 }
 
 // ============================================================
@@ -5755,6 +5977,7 @@ function saveToFile() {
 // mostra sozinha, e a Administração continua exigindo a senha normalmente.
 async function initApp() {
   loadData();
+  await loadAdminOverridesFromRepo(); // aplica criações/edições/exclusões feitas pelo Admin em qualquer TV
   await loadIndicadoresValoresFromRepo(); // aplica meses novos de dados/indicadores-valores.json antes do primeiro render
   renderDashboard();
   showPage('dashboard');
