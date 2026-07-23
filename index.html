@@ -2575,7 +2575,7 @@ input[type=range]::-webkit-slider-thumb{
   </div>
       <!-- RIGHT: chart -->
       <div class="pres-chart-panel" id="pres-chart-panel">
-        <div class="pres-chart-title">Evolução Mensal — 2025</div>
+        <div class="pres-chart-title">Evolução Mensal — 2026</div>
         <div class="pres-chart-wrap">
           <canvas id="pres-chart" style="box-sizing: border-box;" width="300"></canvas>
         </div>
@@ -4320,11 +4320,39 @@ function closeDetail(e, force) {
     if (modalChart){modalChart.destroy();modalChart=null;}
   }
 }
+// Arredonda pra cima pro próximo número "redondo" (1/2/5/10 x potência de 10) —
+// evita que o Chart.js escolha um teto arbitrário (ex.: 92% virar eixo até 105%).
+function niceCeil(max) {
+  if (max <= 0) return 1;
+  const mag = Math.pow(10, Math.floor(Math.log10(max)));
+  const norm = max / mag;
+  const niceNorm = norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 5 ? 5 : 10;
+  return niceNorm * mag;
+}
+// Eixo Y consistente entre indicadores: sempre começa em zero (ou num piso
+// negativo arredondado, se o indicador realmente cair abaixo disso) — em vez
+// da escala "flutuante" que o Chart.js monta sozinho pra cada gráfico, o que
+// fazia indicadores parecidos parecerem ter oscilações bem diferentes.
+// Para "%": nunca deixa o teto passar de 100% (ali onde o indicador é uma taxa
+// que satura em 100, o gráfico plano não ganha um teto de 105/110% à toa), mas
+// também não força tudo pra 0-100 — um indicador que varia entre 0 e 5%
+// (ex.: tempo de resposta) ficaria achatado e ilegível numa escala de 100.
+function computeYAxisRange(disp, tgt, isP) {
+  const nums = disp.filter(v => v !== null && v !== undefined);
+  if (tgt !== null) nums.push(tgt);
+  const dataMin = nums.length ? Math.min(...nums) : 0;
+  const dataMax = nums.length ? Math.max(...nums) : (isP ? 100 : 1);
+  const min = dataMin < 0 ? Math.floor(dataMin/10)*10 : 0;
+  if (!isP) return { min, max: undefined };
+  const max = dataMax >= 100 ? 100 : Math.min(100, niceCeil(dataMax * 1.08));
+  return { min, max };
+}
 function buildDetailChart(row, vals) {
   if (modalChart){modalChart.destroy();modalChart=null;}
   const isP = row.unit==='%';
   const disp = vals.map(v=>v===null?null:isP?+(v*100).toFixed(3):v);
   const tgt = row.targetVal!==null ? (isP?row.targetVal*100:row.targetVal) : null;
+  const yRange = computeYAxisRange(disp, tgt, isP);
   const pc = procColor(row.processo);
   const ds = [{
     label: row.indicador, data: disp,
@@ -4350,7 +4378,7 @@ function buildDetailChart(row, vals) {
           callbacks:{label:ctx=>{const v=ctx.raw;if(v===null) return 'Sem dados';if(row.unit==='h') return ' '+fmtHoras(v);return ` ${v}${isP?'%':row.unit||''}`}}}},
       scales:{
         x:{grid:{color:'#1e2d4a'},ticks:{color:'#7a8aaa',font:{family:'DM Sans',size:11}}},
-        y:{grid:{color:'#1e2d4a'},ticks:{color:'#7a8aaa',font:{family:'DM Sans',size:11},callback:v=>isP?v+'%':v}}
+        y:{grid:{color:'#1e2d4a'},min:yRange.min,max:yRange.max,ticks:{color:'#7a8aaa',font:{family:'DM Sans',size:11},callback:v=>isP?v+'%':v}}
       }}
   });
 }
@@ -5896,6 +5924,7 @@ function buildPresChart(row, vals) {
   const isP = row.unit === '%';
   const disp = vals.map(v => v === null ? null : isP ? +(v*100).toFixed(3) : v);
   const tgt = row.targetVal !== null ? (isP ? row.targetVal*100 : row.targetVal) : null;
+  const yRange = computeYAxisRange(disp, tgt, isP);
 
   const goldGrad = ctx.getContext('2d').createLinearGradient(0, 0, 0, 260);
   goldGrad.addColorStop(0, 'rgba(212,169,125,.25)');
@@ -5963,6 +5992,8 @@ function buildPresChart(row, vals) {
         },
         y: {
           grid: { color: 'rgba(255,255,255,.05)' },
+          min: yRange.min,
+          max: yRange.max,
           ticks: {
             color: 'rgba(154,144,144,.6)',
             font: { family: 'Barlow', size: 13 },
